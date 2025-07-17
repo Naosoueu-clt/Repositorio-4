@@ -17,7 +17,7 @@ local ESP_COLOR = Color3.fromRGB(0,255,255)
 local OUTLINE_COLOR = Color3.fromRGB(255,255,0)
 local FILL_TRANSPARENCY = 0.7
 local OUTLINE_TRANSPARENCY = 0
-local MAX_DISTANCE = 500
+local MAX_DISTANCE = math.huge -- Agora sem limite por padrão (pode ser ajustado no menu)
 local FONTE_PEQUENA = 13
 local ESPObjects = {}
 local TARGET_PLAYER = nil
@@ -172,6 +172,7 @@ local function setupMenu()
     floatBtn.AutoButtonColor = true
     floatBtn.Parent = gui
 
+    -- Drag do botão flutuante
     local dragging, dragInput, dragStart, startPos
     floatBtn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -196,13 +197,39 @@ local function setupMenu()
     -- MENU PRINCIPAL
     local menu = Instance.new("Frame", gui)
     menu.Name = "MenuFrame"
-    menu.Size = UDim2.new(0,340,0,370)
+    menu.Size = UDim2.new(0,340,0,410)
     menu.Position = UDim2.new(0,60,0.35,0)
     menu.BackgroundColor3 = Color3.fromRGB(24,24,28)
     menu.BorderSizePixel = 0
     menu.Visible = false
     menu.AnchorPoint = Vector2.new(0,0.5)
     menu.BackgroundTransparency = 0.05
+
+    -- Drag do painel principal (menu)
+    local draggingPanel, dragInputPanel, dragStartPanel, startPosPanel
+    menu.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            draggingPanel = true
+            dragStartPanel = input.Position
+            startPosPanel = menu.Position
+        end
+    end)
+    menu.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInputPanel = input
+        end
+    end)
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if input == dragInputPanel and draggingPanel then
+            local delta = input.Position - dragStartPanel
+            menu.Position = UDim2.new(startPosPanel.X.Scale, startPosPanel.X.Offset + delta.X, startPosPanel.Y.Scale, startPosPanel.Y.Offset + delta.Y)
+        end
+    end)
+    menu.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            draggingPanel = false
+        end
+    end)
 
     -- Fechar menu
     local closeBtn = Instance.new("TextButton", menu)
@@ -296,11 +323,44 @@ local function setupMenu()
         end
     end)
 
+    -- Campo de ajuste de distância máxima
+    local distLabel = Instance.new("TextLabel", menu)
+    distLabel.Text = "Distância Máxima (Studs):"
+    distLabel.Size = UDim2.new(0.5,-10,0,24)
+    distLabel.Position = UDim2.new(0,10,0,120)
+    distLabel.BackgroundTransparency = 1
+    distLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    distLabel.Font = Enum.Font.Gotham
+    distLabel.TextSize = 14
+
+    local distBox = Instance.new("TextBox", menu)
+    distBox.Size = UDim2.new(0.25,0,0,24)
+    distBox.Position = UDim2.new(0.45,10,0,120)
+    distBox.Text = tostring(MAX_DISTANCE == math.huge and "inf" or MAX_DISTANCE)
+    distBox.Font = Enum.Font.Gotham
+    distBox.TextSize = 14
+    distBox.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    distBox.TextColor3 = Color3.fromRGB(255,255,255)
+    distBox.BorderSizePixel = 0
+    distBox.ClearTextOnFocus = false
+
+    distBox.FocusLost:Connect(function()
+        if distBox.Text:lower() == "inf" then
+            MAX_DISTANCE = math.huge
+        else
+            local val = tonumber(distBox.Text)
+            if val and val > 0 then
+                MAX_DISTANCE = val
+            end
+        end
+        updateAllESP()
+    end)
+
     -- Lista de jogadores
     local listLabel = Instance.new("TextLabel", menu)
     listLabel.Text = "Jogadores:"
     listLabel.Size = UDim2.new(1, -20, 0, 22)
-    listLabel.Position = UDim2.new(0,10,0,130)
+    listLabel.Position = UDim2.new(0,10,0,155)
     listLabel.BackgroundTransparency = 1
     listLabel.TextColor3 = Color3.fromRGB(255,255,255)
     listLabel.Font = Enum.Font.Gotham
@@ -309,7 +369,7 @@ local function setupMenu()
 
     local playerList = Instance.new("ScrollingFrame", menu)
     playerList.Size = UDim2.new(1, -20, 0, 140)
-    playerList.Position = UDim2.new(0,10,0,152)
+    playerList.Position = UDim2.new(0,10,0,177)
     playerList.BackgroundTransparency = 0.1
     playerList.BackgroundColor3 = Color3.fromRGB(30,30,36)
     playerList.BorderSizePixel = 0
