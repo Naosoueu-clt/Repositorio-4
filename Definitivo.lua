@@ -9,7 +9,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
 
 -- VARIÁVEIS DO ESP
 local ESP_ENABLED = true
@@ -42,7 +42,6 @@ local function showLoadingScreen()
     label.TextSize = 22
     label.Text = "Script carregando"
     label.TextStrokeTransparency = 0.8
-    -- Animação de "..."
     coroutine.wrap(function()
         while gui.Parent do
             for i=1,3 do
@@ -54,7 +53,6 @@ local function showLoadingScreen()
     wait(2)
     label.Text = "Script carregado!"
     label.TextColor3 = Color3.fromRGB(60,255,80)
-    -- Fade out
     TweenService:Create(frame, TweenInfo.new(1), {BackgroundTransparency=1}):Play()
     TweenService:Create(label, TweenInfo.new(1), {TextTransparency=1}):Play()
     wait(1.1)
@@ -97,7 +95,6 @@ local function createBillboard(target, name, distance)
     return billboard
 end
 
--- REMOVE ESP
 local function removeESP(char)
     if ESPObjects[char] then
         pcall(function() ESPObjects[char].Highlight:Destroy() end)
@@ -106,7 +103,6 @@ local function removeESP(char)
     end
 end
 
--- ATUALIZA ESP PARA UM JOGADOR
 local function updateESP(player)
     if player == LocalPlayer then return end
     local char = player.Character
@@ -152,6 +148,32 @@ Players.PlayerAdded:Connect(function(player)
     end)
 end)
 
+-- Função robusta de drag para gui
+local function makeDraggable(guiObject)
+    local dragging = false
+    local dragStart, startPos
+
+    guiObject.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = guiObject.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            guiObject.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
 -- MENU POLIDO COM BOTÃO FLUTUANTE
 local function setupMenu()
     local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
@@ -172,27 +194,7 @@ local function setupMenu()
     floatBtn.AutoButtonColor = true
     floatBtn.Parent = gui
 
-    -- Drag do botão flutuante
-    local dragging, dragInput, dragStart, startPos
-    floatBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = floatBtn.Position
-        end
-    end)
-    floatBtn.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            floatBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-    floatBtn.MouseButton1Up:Connect(function() dragging = false end)
+    makeDraggable(floatBtn)
 
     -- MENU PRINCIPAL
     local menu = Instance.new("Frame", gui)
@@ -205,31 +207,7 @@ local function setupMenu()
     menu.AnchorPoint = Vector2.new(0,0.5)
     menu.BackgroundTransparency = 0.05
 
-    -- Drag do painel principal (menu)
-    local draggingPanel, dragInputPanel, dragStartPanel, startPosPanel
-    menu.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingPanel = true
-            dragStartPanel = input.Position
-            startPosPanel = menu.Position
-        end
-    end)
-    menu.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInputPanel = input
-        end
-    end)
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
-        if input == dragInputPanel and draggingPanel then
-            local delta = input.Position - dragStartPanel
-            menu.Position = UDim2.new(startPosPanel.X.Scale, startPosPanel.X.Offset + delta.X, startPosPanel.Y.Scale, startPosPanel.Y.Offset + delta.Y)
-        end
-    end)
-    menu.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingPanel = false
-        end
-    end)
+    makeDraggable(menu)
 
     -- Fechar menu
     local closeBtn = Instance.new("TextButton", menu)
