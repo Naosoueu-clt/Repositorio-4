@@ -10,7 +10,6 @@ local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local StarterGui = game:GetService("StarterGui")
-local UserInputService = game:GetService("UserInputService")
 
 -- VARIÁVEIS DO ESP
 local ESP_ENABLED = true
@@ -23,99 +22,6 @@ local FONTE_PEQUENA = 13
 local ESPObjects = {}
 local TARGET_PLAYER = nil
 local TARGET_ONLY = false
-
--- FUNÇÃO: ÍCONE DE OLHO SVG (COMO IMAGEBUTTON)
-local function getEyeIcon()
-    -- SVG convertido para assetId Roblox: https://www.svgrepo.com/svg/21045/eye
-    -- Como Roblox não suporta SVG nativo, use um Data URI ou assetId de uma imagem de olho enviada ou use um quadro desenhado.
-    -- Aqui, usaremos um ID comum de um olho estilizado (pode ser trocado por seu próprio asset).
-    -- Exemplo de asset: https://create.roblox.com/store/asset/15397777621/Eye-Icon
-    return "rbxassetid://15397777621"
-end
-
--- FUNÇÃO DE DETECÇÃO DE SCRIPT/HACK
-local DetectedScriptUsers = {}
-
-local function isSuspicious(player)
-    -- Métodos heurísticos simples (não garantem 100% de precisão)
-    -- 1. Checa se existe uma ScreenGui desconhecida no PlayerGui
-    -- 2. Checa se o player está muito rápido
-    -- 3. Checa se há ferramentas estranhas
-    if not player.Character or not player.Character:FindFirstChildOfClass("Humanoid") then return false end
-    local found = false
-
-    -- Checa GUIs suspeitas
-    local safeGuis = {["ESPMenu"]=true,["ESPLoading"]=true}
-    local pg = player:FindFirstChild("PlayerGui")
-    if pg then
-        for _, gui in ipairs(pg:GetChildren()) do
-            if gui:IsA("ScreenGui") and not safeGuis[gui.Name] and not gui.Name:match("^Roblox") then
-                found = true
-            end
-        end
-    end
-
-    -- Checa velocidade anormal
-    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-    if humanoid and humanoid.WalkSpeed > 25 then
-        found = true
-    end
-
-    -- Checa ferramentas não permitidas
-    for _, tool in ipairs(player.Backpack:GetChildren()) do
-        if tool:IsA("Tool") and not tool.Name:match("Sword") and not tool.Name:match("Gun") then
-            found = true
-        end
-    end
-
-    return found
-end
-
-local function scanForScriptUsers()
-    DetectedScriptUsers = {}
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and isSuspicious(player) then
-            table.insert(DetectedScriptUsers, player)
-        end
-    end
-end
-
-local function showScriptUsersMenu(parent)
-    local warningFrame = Instance.new("Frame", parent)
-    warningFrame.Name = "HackList"
-    warningFrame.Size = UDim2.new(1, -20, 0, 80)
-    warningFrame.Position = UDim2.new(0, 10, 1, -124)
-    warningFrame.BackgroundColor3 = Color3.fromRGB(64, 32, 32)
-    warningFrame.BackgroundTransparency = 0.18
-    warningFrame.BorderSizePixel = 0
-
-    local title = Instance.new("TextLabel", warningFrame)
-    title.Size = UDim2.new(1,0,0,22)
-    title.Position = UDim2.new(0,0,0,0)
-    title.BackgroundTransparency = 1
-    title.TextColor3 = Color3.fromRGB(255,80,80)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 15
-    title.Text = "Possíveis usuários de script:"
-
-    local list = Instance.new("TextLabel", warningFrame)
-    list.Size = UDim2.new(1,0,1,-24)
-    list.Position = UDim2.new(0,0,0,24)
-    list.BackgroundTransparency = 1
-    list.TextColor3 = Color3.fromRGB(255,180,180)
-    list.Font = Enum.Font.Gotham
-    list.TextSize = 14
-    list.Text = (function()
-        if #DetectedScriptUsers == 0 then return "Nenhum suspeito encontrado." end
-        local names = {}
-        for _,p in ipairs(DetectedScriptUsers) do
-            table.insert(names, p.DisplayName.." ["..p.Name.."]")
-        end
-        return table.concat(names, "\n")
-    end)()
-    list.TextXAlignment = Enum.TextXAlignment.Left
-    list.TextYAlignment = Enum.TextYAlignment.Top
-end
 
 -- TELA DE CARREGAMENTO
 local function showLoadingScreen()
@@ -136,6 +42,7 @@ local function showLoadingScreen()
     label.TextSize = 22
     label.Text = "Script carregando"
     label.TextStrokeTransparency = 0.8
+    -- Animação de "..."
     coroutine.wrap(function()
         while gui.Parent do
             for i=1,3 do
@@ -147,6 +54,7 @@ local function showLoadingScreen()
     wait(2)
     label.Text = "Script carregado!"
     label.TextColor3 = Color3.fromRGB(60,255,80)
+    -- Fade out
     TweenService:Create(frame, TweenInfo.new(1), {BackgroundTransparency=1}):Play()
     TweenService:Create(label, TweenInfo.new(1), {TextTransparency=1}):Play()
     wait(1.1)
@@ -244,61 +152,51 @@ Players.PlayerAdded:Connect(function(player)
     end)
 end)
 
--- MENU POLIDO COM BOTÃO FLUTUANTE CORRIGIDO
+-- MENU POLIDO COM BOTÃO FLUTUANTE
 local function setupMenu()
-    local gui = Instance.new("ScreenGui")
+    local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
     gui.Name = "ESPMenu"
     gui.ResetOnSpawn = false
-    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-    -- Botão flutuante (agora ImageButton com ícone de olho)
-    local floatBtn = Instance.new("ImageButton")
+    -- Botão flutuante
+    local floatBtn = Instance.new("TextButton")
     floatBtn.Name = "FloatButton"
     floatBtn.Size = UDim2.new(0,42,0,42)
     floatBtn.Position = UDim2.new(0,11,0.37,0)
     floatBtn.BackgroundColor3 = ESP_COLOR
-    floatBtn.Image = getEyeIcon()
-    floatBtn.ImageColor3 = Color3.new(1,1,1)
-    floatBtn.Parent = gui
+    floatBtn.Text = "☰"
+    floatBtn.Font = Enum.Font.GothamBlack
+    floatBtn.TextSize = 25
+    floatBtn.TextColor3 = Color3.new(1,1,1)
     floatBtn.BorderSizePixel = 0
     floatBtn.AutoButtonColor = true
+    floatBtn.Parent = gui
 
-    -- Corrige arrastar com mouse/touch
     local dragging, dragInput, dragStart, startPos
-
     floatBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
             dragStart = input.Position
             startPos = floatBtn.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
         end
     end)
-
     floatBtn.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
             dragInput = input
         end
     end)
-
-    UserInputService.InputChanged:Connect(function(input)
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
-            floatBtn.Position = UDim2.new(
-                startPos.X.Scale, math.clamp(startPos.X.Offset + delta.X, 0, gui.AbsoluteSize.X-floatBtn.AbsoluteSize.X),
-                startPos.Y.Scale, math.clamp(startPos.Y.Offset + delta.Y, 0, gui.AbsoluteSize.Y-floatBtn.AbsoluteSize.Y)
-            )
+            floatBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
+    floatBtn.MouseButton1Up:Connect(function() dragging = false end)
 
     -- MENU PRINCIPAL
     local menu = Instance.new("Frame", gui)
     menu.Name = "MenuFrame"
-    menu.Size = UDim2.new(0,340,0,410)
+    menu.Size = UDim2.new(0,340,0,370)
     menu.Position = UDim2.new(0,60,0.35,0)
     menu.BackgroundColor3 = Color3.fromRGB(24,24,28)
     menu.BorderSizePixel = 0
@@ -458,7 +356,7 @@ local function setupMenu()
     local resetTargetBtn = Instance.new("TextButton", menu)
     resetTargetBtn.Text = "ESP em todos"
     resetTargetBtn.Size = UDim2.new(0.5,-10,0,28)
-    resetTargetBtn.Position = UDim2.new(0,10,1,-82)
+    resetTargetBtn.Position = UDim2.new(0,10,1,-38)
     resetTargetBtn.Font = Enum.Font.Gotham
     resetTargetBtn.TextSize = 14
     resetTargetBtn.BackgroundColor3 = Color3.fromRGB(33,44,33)
@@ -475,7 +373,7 @@ local function setupMenu()
     local cameraBtn = Instance.new("TextButton", menu)
     cameraBtn.Text = "Seguir câmera do alvo"
     cameraBtn.Size = UDim2.new(0.5,-10,0,28)
-    cameraBtn.Position = UDim2.new(0.5,10,1,-82)
+    cameraBtn.Position = UDim2.new(0.5,10,1,-38)
     cameraBtn.Font = Enum.Font.Gotham
     cameraBtn.TextSize = 14
     cameraBtn.BackgroundColor3 = Color3.fromRGB(30,44,60)
@@ -494,22 +392,6 @@ local function setupMenu()
         else
             Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") or Camera.CameraSubject
         end
-    end)
-
-    -- Botão: Varredura de outros usuários de script
-    local scanBtn = Instance.new("TextButton", menu)
-    scanBtn.Text = "Varredura de hackers"
-    scanBtn.Size = UDim2.new(1,-20,0,28)
-    scanBtn.Position = UDim2.new(0,10,1,-44)
-    scanBtn.Font = Enum.Font.GothamBold
-    scanBtn.TextSize = 15
-    scanBtn.BackgroundColor3 = Color3.fromRGB(80,40,40)
-    scanBtn.TextColor3 = Color3.fromRGB(255,180,180)
-    scanBtn.BorderSizePixel = 0
-    scanBtn.MouseButton1Click:Connect(function()
-        scanForScriptUsers()
-        if menu:FindFirstChild("HackList") then menu.HackList:Destroy() end
-        showScriptUsersMenu(menu)
     end)
 end
 
