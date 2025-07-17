@@ -164,3 +164,23 @@ local debounce = false toggleButton.MouseButton1Click:Connect(function() if debo
 
 for _, player in pairs(Players:GetPlayers()) do player.CharacterAdded:Connect(function() task.wait(1) if ESPEnabled then if not ActiveESPPlayer or ActiveESPPlayer == player then createESP(player) end end end) end
 
+print("🔥 Script F.lua carregado com sucesso!")
+
+local player = game.Players.LocalPlayer
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local label = Instance.new("TextLabel", gui)
+label.Size = UDim2.new(0, 200, 0, 50)
+label.Position = UDim2.new(0.5, -100, 0.1, 0)
+label.Text = "Script F.lua OK!"
+label.TextColor3 = Color3.new(1, 1, 1)
+label.BackgroundTransparency = 1
+local success, result = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Naosoueu-clt/Repositorio-4/main/F.lua"))()
+end)
+
+if success then
+    print("✅ Script carregado com sucesso!")
+else
+    warn("❌ Erro ao carregar script remoto:", result)
+end
+
