@@ -1,166 +1,203 @@
---[[ ESP System Avançado com Menu de Jogadores --]]
+--[[ 
+    ESP Script para Roblox (Lua)
+    Funcionalidades:
+    - Destaca jogadores com borda brilhante (Highlight)
+    - Mostra nomes e distância dos jogadores
+    - Menu para ativar/desativar ESP
+    - Suporte para melhorias: filtro de times, range máximo, suavidade visual
 
-local Players = game:GetService("Players") local RunService = game:GetService("RunService") local UserInputService = game:GetService("UserInputService") local LocalPlayer = Players.LocalPlayer local Camera = workspace.CurrentCamera
+    OBS: Coloque este script em LocalScript (StarterPlayerScripts ou semelhante)
+    ATENÇÃO: Para uso em jogos próprios/autorizados. 
+--]]
 
-local ESPEnabled = false local ESPConnections = {} local ActiveESPPlayer = nil
+-- CONFIGURAÇÕES
+local MAX_DISTANCE = 300    -- Distância máxima para mostrar ESP (em studs)
+local SHOW_TEAM = false     -- Mostrar apenas jogadores de outro time?
+local ESP_REFRESH = 0.1     -- Intervalo de atualização (segundos)
+local ESP_COLOR = Color3.fromRGB(0, 255, 255)
+local HIGHLIGHT_FILL = Color3.fromRGB(0, 255, 255)
+local HIGHLIGHT_OUTLINE = Color3.fromRGB(255, 255, 0)
+local OUTLINE_TRANSPARENCY = 0
+local FILL_TRANSPARENCY = 0.7
 
--- Função para criar o Highlight melhorado local function createHighlight(char) local highlight = Instance.new("Highlight") highlight.Name = "ESPBox" highlight.FillColor = Color3.fromRGB(255, 0, 0) highlight.OutlineColor = Color3.fromRGB(255, 255, 255) highlight.FillTransparency = 0.6 highlight.OutlineTransparency = 0.2 highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop highlight.Adornee = char highlight.Parent = char end
+-- VARIÁVEIS
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local ESP_ENABLED = true
 
--- Cria ESP para um jogador local function createESP(player) if player == LocalPlayer then return end local char = player.Character if not char or not char:FindFirstChild("Head") then return end
+-- TABELA PARA GUARDAR ESP
+local ESPObjects = {}
 
-if not char:FindFirstChild("ESPBox") then
-    createHighlight(char)
+-- FUNÇÃO: Criar highlight
+local function createHighlight(target)
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = target
+    highlight.FillColor = HIGHLIGHT_FILL
+    highlight.OutlineColor = HIGHLIGHT_OUTLINE
+    highlight.FillTransparency = FILL_TRANSPARENCY
+    highlight.OutlineTransparency = OUTLINE_TRANSPARENCY
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = target
+    return highlight
 end
 
-if not char.Head:FindFirstChild("ESPHighlight") then
-    local gui = Instance.new("BillboardGui")
-    gui.Name = "ESPHighlight"
-    gui.Size = UDim2.new(0, 80, 0, 25)
-    gui.AlwaysOnTop = true
-    gui.StudsOffset = Vector3.new(0, 3, 0)
-    gui.Adornee = char.Head
-    gui.Parent = char.Head
+-- FUNÇÃO: Criar BillboardGui com nome e distância
+local function createBillboard(target, name, distance)
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESPBillboard"
+    billboard.Adornee = target
+    billboard.Size = UDim2.new(0, 200, 0, 40)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
 
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = player.Name
-    nameLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-    nameLabel.TextStrokeTransparency = 0
-    nameLabel.TextScaled = true
-    nameLabel.Font = Enum.Font.SourceSansBold
-    nameLabel.Parent = gui
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(1, 0, 1, 0)
+    text.BackgroundTransparency = 1
+    text.TextStrokeTransparency = 0.2
+    text.TextColor3 = ESP_COLOR
+    text.Font = Enum.Font.GothamBold
+    text.TextScaled = true
+    text.Text = string.format("%s | %.1fm", name, distance/3.571) -- Aproximadamente metros
+    text.Parent = billboard
 
-    local distLabel = Instance.new("TextLabel")
-    distLabel.Name = "DistanceLabel"
-    distLabel.Size = UDim2.new(1, 0, 0.5, 0)
-    distLabel.Position = UDim2.new(0, 0, 0.5, 0)
-    distLabel.BackgroundTransparency = 1
-    distLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    distLabel.TextStrokeTransparency = 0
-    distLabel.TextScaled = true
-    distLabel.Font = Enum.Font.SourceSansBold
-    distLabel.Parent = gui
+    billboard.Parent = target
+    return billboard
+end
 
-    ESPConnections[player] = RunService.Heartbeat:Connect(function()
-        if not ESPEnabled or not char:FindFirstChild("HumanoidRootPart") then return end
-        local myChar = LocalPlayer.Character
-        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
-            local dist = (char.HumanoidRootPart.Position - myChar.HumanoidRootPart.Position).Magnitude
-            distLabel.Text = string.format("Distância: %.1f", dist)
+-- FUNÇÃO: Remover ESP visual
+local function removeESP(char)
+    if ESPObjects[char] then
+        if ESPObjects[char].Highlight then
+            pcall(function() ESPObjects[char].Highlight:Destroy() end)
         end
+        if ESPObjects[char].Billboard then
+            pcall(function() ESPObjects[char].Billboard:Destroy() end)
+        end
+        ESPObjects[char] = nil
+    end
+end
+
+-- FUNÇÃO: Atualizar ESP para um jogador
+local function updateESP(player)
+    if player == LocalPlayer then return end
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then removeESP(char) return end
+
+    -- Filtro por time
+    if SHOW_TEAM and player.Team == LocalPlayer.Team then
+        removeESP(char)
+        return
+    end
+
+    local distance = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart"))
+        and (char.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+        or math.huge
+    if distance > MAX_DISTANCE then
+        removeESP(char)
+        return
+    end
+
+    -- Criação de ESP visual
+    if not ESPObjects[char] then ESPObjects[char] = {} end
+    -- Highlight
+    if not ESPObjects[char].Highlight or ESPObjects[char].Highlight.Parent ~= char then
+        ESPObjects[char].Highlight = createHighlight(char)
+    end
+    -- Billboard
+    if ESPObjects[char].Billboard then
+        ESPObjects[char].Billboard:Destroy()
+    end
+    ESPObjects[char].Billboard = createBillboard(char:FindFirstChild("Head") or char.HumanoidRootPart, player.DisplayName, distance)
+end
+
+-- FUNÇÃO: Atualização geral
+local function updateAllESP()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if ESP_ENABLED then
+            updateESP(player)
+        else
+            if player.Character then removeESP(player.Character) end
+        end
+    end
+end
+
+-- LIMPEZA EM DESCONEXÃO
+Players.PlayerRemoving:Connect(function(player)
+    if player.Character then removeESP(player.Character) end
+end)
+
+-- MENU SIMPLES (ScreenGui)
+local function setupMenu()
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "ESPMenu"
+    gui.Parent = game:GetService("Players").LocalPlayer.PlayerGui
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 200, 0, 120)
+    frame.Position = UDim2.new(0, 10, 0, 120)
+    frame.BackgroundTransparency = 0.3
+    frame.BackgroundColor3 = Color3.new(0,0,0)
+    frame.BorderSizePixel = 2
+    frame.Parent = gui
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1,0,0,30)
+    title.Position = UDim2.new(0,0,0,0)
+    title.Text = "ESP Menu"
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 22
+    title.TextColor3 = Color3.new(1,1,1)
+    title.BackgroundTransparency = 1
+    title.Parent = frame
+
+    -- Botão ESP ON/OFF
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -20, 0, 32)
+    btn.Position = UDim2.new(0,10/200,0,40)
+    btn.Text = "ESP: ON"
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 20
+    btn.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    btn.TextColor3 = Color3.fromRGB(0,255,255)
+    btn.Parent = frame
+
+    btn.MouseButton1Click:Connect(function()
+        ESP_ENABLED = not ESP_ENABLED
+        btn.Text = "ESP: " .. (ESP_ENABLED and "ON" or "OFF")
+        btn.TextColor3 = ESP_ENABLED and Color3.fromRGB(0,255,255) or Color3.fromRGB(255,60,60)
+        updateAllESP()
+    end)
+
+    -- Mostrar times
+    local teamBtn = Instance.new("TextButton")
+    teamBtn.Size = UDim2.new(1, -20, 0, 28)
+    teamBtn.Position = UDim2.new(0,10/200,0,80)
+    teamBtn.Text = "Mostrar Todos Times"
+    teamBtn.Font = Enum.Font.Gotham
+    teamBtn.TextSize = 16
+    teamBtn.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    teamBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    teamBtn.Parent = frame
+
+    teamBtn.MouseButton1Click:Connect(function()
+        SHOW_TEAM = not SHOW_TEAM
+        teamBtn.Text = SHOW_TEAM and "Somente Outros Times" or "Mostrar Todos Times"
+        updateAllESP()
     end)
 end
 
-end
-
--- Remove ESP local function removeESP(player) if ESPConnections[player] then ESPConnections[player]:Disconnect() ESPConnections[player] = nil end
-
-if player.Character then
-    local char = player.Character
-    local h = char:FindFirstChild("ESPBox")
-    if h then h:Destroy() end
-
-    local gui = char:FindFirstChild("Head") and char.Head:FindFirstChild("ESPHighlight")
-    if gui then gui:Destroy() end
-end
-
-end
-
--- Toggle ESP geral local function toggleESP() ESPEnabled = not ESPEnabled ActiveESPPlayer = nil for _, p in pairs(Players:GetPlayers()) do if ESPEnabled then createESP(p) else removeESP(p) end end end
-
--- Toggle ESP único local function toggleSingleESP(targetPlayer) ESPEnabled = true ActiveESPPlayer = targetPlayer for _, p in pairs(Players:GetPlayers()) do if p == targetPlayer then createESP(p) else removeESP(p) end end end
-
--- Ver câmera do jogador local function viewCamera(targetPlayer) if targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then Camera.CameraSubject = targetPlayer.Character.Humanoid end end
-
--- Noclip + teleporte local function noclipToPlayer(targetPlayer) local char = LocalPlayer.Character if not char then return end
-
-for _, p in pairs(char:GetDescendants()) do
-    if p:IsA("BasePart") then
-        p.CanCollide = false
+-- LOOP DE ATUALIZAÇÃO
+spawn(setupMenu)
+RunService.RenderStepped:Connect(function()
+    if ESP_ENABLED then
+        updateAllESP()
     end
+end)
+
+-- ATUALIZAÇÃO PERIÓDICA (para garantir atualização geral)
+while true do
+    updateAllESP()
+    wait(ESP_REFRESH)
 end
-
-if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-    char:MoveTo(targetPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, 3, 0))
-end
-
-end
-
--- Interface principal local gui = Instance.new("ScreenGui") gui.Name = "ESP_UI" gui.ResetOnSpawn = false gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-local mainFrame = Instance.new("Frame") mainFrame.Size = UDim2.new(0, 200, 0, 300) mainFrame.Position = UDim2.new(0, 100, 0, 100) mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30) mainFrame.BorderSizePixel = 0 mainFrame.Active = true mainFrame.Draggable = true mainFrame.Parent = gui
-
-local title = Instance.new("TextLabel") title.Size = UDim2.new(1, 0, 0, 30) title.BackgroundTransparency = 1 title.Text = "ESP Menu" title.TextColor3 = Color3.fromRGB(255, 255, 255) title.Font = Enum.Font.SourceSansBold title.TextScaled = true title.Parent = mainFrame
-
-local listFrame = Instance.new("ScrollingFrame") listFrame.Size = UDim2.new(1, 0, 1, -30) listFrame.Position = UDim2.new(0, 0, 0, 30) listFrame.CanvasSize = UDim2.new(0, 0, 0, 0) listFrame.ScrollBarThickness = 6 listFrame.BackgroundTransparency = 1 listFrame.Parent = mainFrame
-
--- Atualiza a lista de jogadores local function updatePlayerList() listFrame:ClearAllChildren() local layout = Instance.new("UIListLayout") layout.SortOrder = Enum.SortOrder.LayoutOrder layout.Parent = listFrame
-
-for _, p in pairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -10, 0, 30)
-        btn.Position = UDim2.new(0, 5, 0, 0)
-        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        btn.TextColor3 = Color3.new(1,1,1)
-        btn.Font = Enum.Font.SourceSans
-        btn.Text = p.Name
-        btn.TextScaled = true
-        btn.Parent = listFrame
-
-        btn.MouseButton1Click:Connect(function()
-            local menu = Instance.new("Frame")
-            menu.Size = UDim2.new(0, 180, 0, 90)
-            menu.Position = UDim2.new(0.5, -90, 0, btn.AbsolutePosition.Y - 90)
-            menu.BackgroundColor3 = Color3.fromRGB(45,45,45)
-            menu.Parent = gui
-
-            local camBtn = Instance.new("TextButton")
-            camBtn.Size = UDim2.new(1, 0, 0.33, 0)
-            camBtn.Text = "Ver Câmera"
-            camBtn.Parent = menu
-
-            local noclipBtn = Instance.new("TextButton")
-            noclipBtn.Size = UDim2.new(1, 0, 0.33, 0)
-            noclipBtn.Position = UDim2.new(0, 0, 0.33, 0)
-            noclipBtn.Text = "Noclip + TP"
-            noclipBtn.Parent = menu
-
-            local espBtn = Instance.new("TextButton")
-            espBtn.Size = UDim2.new(1, 0, 0.33, 0)
-            espBtn.Position = UDim2.new(0, 0, 0.66, 0)
-            espBtn.Text = "ESP Apenas"
-            espBtn.Parent = menu
-
-            camBtn.MouseButton1Click:Connect(function()
-                viewCamera(p)
-            end)
-
-            noclipBtn.MouseButton1Click:Connect(function()
-                noclipToPlayer(p)
-            end)
-
-            espBtn.MouseButton1Click:Connect(function()
-                toggleSingleESP(p)
-            end)
-
-            task.delay(3, function()
-                if menu then menu:Destroy() end
-            end)
-        end)
-    end
-end
-
-end
-
--- Atualiza lista sempre que entra ou sai jogador Players.PlayerAdded:Connect(updatePlayerList) Players.PlayerRemoving:Connect(updatePlayerList) updatePlayerList()
-
--- Botão flutuante alternativo com toggle local toggleButton = Instance.new("TextButton") toggleButton.Size = UDim2.new(0, 40, 0, 40) toggleButton.Position = UDim2.new(0, 10, 0, 10) toggleButton.Text = "👁" toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50) toggleButton.TextColor3 = Color3.new(1,1,1) toggleButton.Font = Enum.Font.SourceSansBold toggleButton.TextScaled = true toggleButton.Draggable = true toggleButton.Active = true toggleButton.Parent = gui
-
-local debounce = false toggleButton.MouseButton1Click:Connect(function() if debounce then return end debounce = true toggleESP() toggleButton.BackgroundColor3 = ESPEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0) task.wait(0.3) debounce = false end)
-
--- Atualiza ESP para novos jogadores/respawns Players.PlayerAdded:Connect(function(player) player.CharacterAdded:Connect(function() task.wait(1) if ESPEnabled then if not ActiveESPPlayer or ActiveESPPlayer == player then createESP(player) end end end) end)
-
-for _, player in pairs(Players:GetPlayers()) do player.CharacterAdded:Connect(function() task.wait(1) if ESPEnabled then if not ActiveESPPlayer or ActiveESPPlayer == player then createESP(player) end end end) end
-
