@@ -17,7 +17,7 @@ local ESP_COLOR = Color3.fromRGB(0,255,255)
 local OUTLINE_COLOR = Color3.fromRGB(255,255,0)
 local FILL_TRANSPARENCY = 0.7
 local OUTLINE_TRANSPARENCY = 0
-local MAX_DISTANCE = math.huge -- Agora sem limite por padrão (pode ser ajustado no menu)
+local MAX_DISTANCE = math.huge
 local FONTE_PEQUENA = 13
 local ESPObjects = {}
 local TARGET_PLAYER = nil
@@ -30,7 +30,7 @@ local function showLoadingScreen()
     local frame = Instance.new("Frame", gui)
     frame.AnchorPoint = Vector2.new(0.5,0.5)
     frame.Position = UDim2.new(0.5,0,0.5,0)
-    frame.Size = UDim2.new(0,240,0,60)
+    frame.Size = UDim2.new(0,200,0,50)
     frame.BackgroundColor3 = Color3.fromRGB(30,30,35)
     frame.BackgroundTransparency = 0.1
     frame.BorderSizePixel = 0
@@ -39,7 +39,7 @@ local function showLoadingScreen()
     label.BackgroundTransparency = 1
     label.TextColor3 = Color3.fromRGB(0,255,255)
     label.Font = Enum.Font.GothamBold
-    label.TextSize = 22
+    label.TextSize = 20
     label.Text = "Script carregando"
     label.TextStrokeTransparency = 0.8
     coroutine.wrap(function()
@@ -76,7 +76,7 @@ local function createBillboard(target, name, distance)
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "ESPBillboard"
     billboard.Adornee = target
-    billboard.Size = UDim2.new(0, 170, 0, 20)
+    billboard.Size = UDim2.new(0, 150, 0, 18)
     billboard.StudsOffset = Vector3.new(0, 3.3, 0)
     billboard.AlwaysOnTop = true
 
@@ -148,19 +148,26 @@ Players.PlayerAdded:Connect(function(player)
     end)
 end)
 
--- Função robusta de drag para gui
-local function makeDraggable(guiObject)
+-- Sistema universal de drag para GUIs (não bugado)
+local function makeDraggable(frame, dragBar)
     local dragging = false
-    local dragStart, startPos
+    local dragStart = Vector2.new(0, 0)
+    local startPos = UDim2.new()
 
-    guiObject.InputBegan:Connect(function(input)
+    -- Use dragBar se fornecido, senão o próprio frame
+    local target = dragBar or frame
+
+    target.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
-            startPos = guiObject.Position
-            input.Changed:Connect(function()
+            startPos = frame.Position
+
+            local conn
+            conn = input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
+                    if conn then conn:Disconnect() end
                 end
             end)
         end
@@ -169,7 +176,12 @@ local function makeDraggable(guiObject)
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
-            guiObject.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            frame.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
         end
     end)
 end
@@ -183,12 +195,12 @@ local function setupMenu()
     -- Botão flutuante
     local floatBtn = Instance.new("TextButton")
     floatBtn.Name = "FloatButton"
-    floatBtn.Size = UDim2.new(0,42,0,42)
-    floatBtn.Position = UDim2.new(0,11,0.37,0)
+    floatBtn.Size = UDim2.new(0,40,0,40)
+    floatBtn.Position = UDim2.new(0,8,0.35,0)
     floatBtn.BackgroundColor3 = ESP_COLOR
     floatBtn.Text = "☰"
     floatBtn.Font = Enum.Font.GothamBlack
-    floatBtn.TextSize = 25
+    floatBtn.TextSize = 22
     floatBtn.TextColor3 = Color3.new(1,1,1)
     floatBtn.BorderSizePixel = 0
     floatBtn.AutoButtonColor = true
@@ -196,26 +208,32 @@ local function setupMenu()
 
     makeDraggable(floatBtn)
 
-    -- MENU PRINCIPAL
+    -- MENU PRINCIPAL (painel reduzido para tela de celular)
     local menu = Instance.new("Frame", gui)
     menu.Name = "MenuFrame"
-    menu.Size = UDim2.new(0,340,0,410)
-    menu.Position = UDim2.new(0,60,0.35,0)
+    menu.Size = UDim2.new(0,210,0,220)
+    menu.Position = UDim2.new(0,55,0.35,0)
     menu.BackgroundColor3 = Color3.fromRGB(24,24,28)
     menu.BorderSizePixel = 0
     menu.Visible = false
     menu.AnchorPoint = Vector2.new(0,0.5)
     menu.BackgroundTransparency = 0.05
 
-    makeDraggable(menu)
+    -- Drag apenas pela barra do título para não atrapalhar botões
+    local dragBar = Instance.new("Frame", menu)
+    dragBar.Size = UDim2.new(1,0,0,34)
+    dragBar.BackgroundTransparency = 1
+    dragBar.Name = "DragBar"
+
+    makeDraggable(menu, dragBar)
 
     -- Fechar menu
     local closeBtn = Instance.new("TextButton", menu)
     closeBtn.Text = "✕"
     closeBtn.Font = Enum.Font.GothamBlack
-    closeBtn.TextSize = 19
-    closeBtn.Size = UDim2.new(0,30,0,30)
-    closeBtn.Position = UDim2.new(1,-34,0,4)
+    closeBtn.TextSize = 17
+    closeBtn.Size = UDim2.new(0,28,0,28)
+    closeBtn.Position = UDim2.new(1,-30,0,3)
     closeBtn.BackgroundColor3 = Color3.fromRGB(32,32,32)
     closeBtn.TextColor3 = Color3.fromRGB(255,90,90)
     closeBtn.BorderSizePixel = 0
@@ -225,21 +243,24 @@ local function setupMenu()
 
     -- Título
     local title = Instance.new("TextLabel", menu)
-    title.Size = UDim2.new(1,0,0,38)
-    title.Position = UDim2.new(0,0,0,0)
+    title.Size = UDim2.new(0.8,0,0,34)
+    title.Position = UDim2.new(0,5,0,0)
     title.Text = "ESP Menu"
     title.Font = Enum.Font.GothamBold
-    title.TextSize = 21
+    title.TextSize = 18
     title.TextColor3 = ESP_COLOR
     title.BackgroundTransparency = 1
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Name = "MenuTitle"
+    title.Parent = dragBar
 
     -- Ativar/desativar ESP
     local toggleBtn = Instance.new("TextButton", menu)
-    toggleBtn.Size = UDim2.new(0.5,-10,0,34)
-    toggleBtn.Position = UDim2.new(0,10,0,50)
+    toggleBtn.Size = UDim2.new(0.93,0,0,30)
+    toggleBtn.Position = UDim2.new(0.035,0,0,40)
     toggleBtn.Text = "ESP: ON"
     toggleBtn.Font = Enum.Font.Gotham
-    toggleBtn.TextSize = 17
+    toggleBtn.TextSize = 15
     toggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,44)
     toggleBtn.TextColor3 = ESP_COLOR
     toggleBtn.BorderSizePixel = 0
@@ -253,11 +274,11 @@ local function setupMenu()
 
     -- Contador de jogadores
     local playerCount = Instance.new("TextLabel", menu)
-    playerCount.Size = UDim2.new(0.5,-10,0,34)
-    playerCount.Position = UDim2.new(0.5,10,0,50)
+    playerCount.Size = UDim2.new(0.93,0,0,20)
+    playerCount.Position = UDim2.new(0.035,0,0,75)
     playerCount.Text = "Jogadores: " .. tostring(#Players:GetPlayers())
     playerCount.Font = Enum.Font.Gotham
-    playerCount.TextSize = 15
+    playerCount.TextSize = 13
     playerCount.BackgroundTransparency = 1
     playerCount.TextColor3 = Color3.fromRGB(255,255,255)
     playerCount.TextXAlignment = Enum.TextXAlignment.Left
@@ -272,19 +293,19 @@ local function setupMenu()
     -- Alterar cor do highlight
     local corLabel = Instance.new("TextLabel", menu)
     corLabel.Text = "Cor do Highlight:"
-    corLabel.Size = UDim2.new(0.5,-10,0,24)
-    corLabel.Position = UDim2.new(0,10,0,95)
+    corLabel.Size = UDim2.new(0.55,0,0,20)
+    corLabel.Position = UDim2.new(0.035,0,0,104)
     corLabel.BackgroundTransparency = 1
     corLabel.TextColor3 = Color3.fromRGB(255,255,255)
     corLabel.Font = Enum.Font.Gotham
-    corLabel.TextSize = 14
+    corLabel.TextSize = 12
 
     local colorPicker = Instance.new("TextBox", menu)
-    colorPicker.Size = UDim2.new(0.25,0,0,24)
-    colorPicker.Position = UDim2.new(0.45,10,0,95)
+    colorPicker.Size = UDim2.new(0.35,0,0,20)
+    colorPicker.Position = UDim2.new(0.62,0,0,104)
     colorPicker.Text = "0,255,255"
     colorPicker.Font = Enum.Font.Gotham
-    colorPicker.TextSize = 14
+    colorPicker.TextSize = 12
     colorPicker.BackgroundColor3 = Color3.fromRGB(20,20,20)
     colorPicker.TextColor3 = ESP_COLOR
     colorPicker.BorderSizePixel = 0
@@ -303,20 +324,20 @@ local function setupMenu()
 
     -- Campo de ajuste de distância máxima
     local distLabel = Instance.new("TextLabel", menu)
-    distLabel.Text = "Distância Máxima (Studs):"
-    distLabel.Size = UDim2.new(0.5,-10,0,24)
-    distLabel.Position = UDim2.new(0,10,0,120)
+    distLabel.Text = "Distância Máx:"
+    distLabel.Size = UDim2.new(0.55,0,0,20)
+    distLabel.Position = UDim2.new(0.035,0,0,130)
     distLabel.BackgroundTransparency = 1
     distLabel.TextColor3 = Color3.fromRGB(255,255,255)
     distLabel.Font = Enum.Font.Gotham
-    distLabel.TextSize = 14
+    distLabel.TextSize = 12
 
     local distBox = Instance.new("TextBox", menu)
-    distBox.Size = UDim2.new(0.25,0,0,24)
-    distBox.Position = UDim2.new(0.45,10,0,120)
+    distBox.Size = UDim2.new(0.35,0,0,20)
+    distBox.Position = UDim2.new(0.62,0,0,130)
     distBox.Text = tostring(MAX_DISTANCE == math.huge and "inf" or MAX_DISTANCE)
     distBox.Font = Enum.Font.Gotham
-    distBox.TextSize = 14
+    distBox.TextSize = 12
     distBox.BackgroundColor3 = Color3.fromRGB(20,20,20)
     distBox.TextColor3 = Color3.fromRGB(255,255,255)
     distBox.BorderSizePixel = 0
@@ -334,25 +355,110 @@ local function setupMenu()
         updateAllESP()
     end)
 
-    -- Lista de jogadores
-    local listLabel = Instance.new("TextLabel", menu)
-    listLabel.Text = "Jogadores:"
-    listLabel.Size = UDim2.new(1, -20, 0, 22)
-    listLabel.Position = UDim2.new(0,10,0,155)
-    listLabel.BackgroundTransparency = 1
-    listLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    listLabel.Font = Enum.Font.Gotham
-    listLabel.TextSize = 15
-    listLabel.TextXAlignment = Enum.TextXAlignment.Left
+    -- Botão para abrir painel de jogadores
+    local playerPanelBtn = Instance.new("TextButton", menu)
+    playerPanelBtn.Text = "Selecionar Jogador"
+    playerPanelBtn.Size = UDim2.new(0.93,0,0,24)
+    playerPanelBtn.Position = UDim2.new(0.035,0,0,160)
+    playerPanelBtn.Font = Enum.Font.Gotham
+    playerPanelBtn.TextSize = 13
+    playerPanelBtn.BackgroundColor3 = Color3.fromRGB(30,44,60)
+    playerPanelBtn.TextColor3 = Color3.fromRGB(200,225,255)
+    playerPanelBtn.BorderSizePixel = 0
 
-    local playerList = Instance.new("ScrollingFrame", menu)
-    playerList.Size = UDim2.new(1, -20, 0, 140)
-    playerList.Position = UDim2.new(0,10,0,177)
+    -- Botão: resetar alvo
+    local resetTargetBtn = Instance.new("TextButton", menu)
+    resetTargetBtn.Text = "ESP em todos"
+    resetTargetBtn.Size = UDim2.new(0.45,0,0,22)
+    resetTargetBtn.Position = UDim2.new(0.035,0,1,-28)
+    resetTargetBtn.Font = Enum.Font.Gotham
+    resetTargetBtn.TextSize = 12
+    resetTargetBtn.BackgroundColor3 = Color3.fromRGB(33,44,33)
+    resetTargetBtn.TextColor3 = Color3.fromRGB(180,255,180)
+    resetTargetBtn.BorderSizePixel = 0
+    resetTargetBtn.MouseButton1Click:Connect(function()
+        TARGET_ONLY = false
+        TARGET_PLAYER = nil
+        updateAllESP()
+    end)
+
+    -- Botão: seguir câmera do alvo
+    local cameraBtn = Instance.new("TextButton", menu)
+    cameraBtn.Text = "Seguir câmera"
+    cameraBtn.Size = UDim2.new(0.45,0,0,22)
+    cameraBtn.Position = UDim2.new(0.52,0,1,-28)
+    cameraBtn.Font = Enum.Font.Gotham
+    cameraBtn.TextSize = 12
+    cameraBtn.BackgroundColor3 = Color3.fromRGB(30,44,60)
+    cameraBtn.TextColor3 = Color3.fromRGB(200,225,255)
+    cameraBtn.BorderSizePixel = 0
+    local following = false
+
+    cameraBtn.MouseButton1Click:Connect(function()
+        if TARGET_PLAYER and TARGET_PLAYER.Character and TARGET_PLAYER.Character:FindFirstChild("HumanoidRootPart") then
+            following = not following
+            cameraBtn.TextColor3 = following and Color3.fromRGB(60,255,255) or Color3.fromRGB(200,225,255)
+        end
+    end)
+    RunService.RenderStepped:Connect(function()
+        if following and TARGET_PLAYER and TARGET_PLAYER.Character and TARGET_PLAYER.Character:FindFirstChild("HumanoidRootPart") then
+            Camera.CameraSubject = TARGET_PLAYER.Character.HumanoidRootPart
+        else
+            Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") or Camera.CameraSubject
+        end
+    end)
+
+    -- PAINEL DE JOGADORES (separado)
+    local playerPanel = Instance.new("Frame", gui)
+    playerPanel.Name = "PlayerPanel"
+    playerPanel.Visible = false
+    playerPanel.Size = UDim2.new(0,180,0,200)
+    playerPanel.Position = UDim2.new(0,menu.Position.X.Offset+220,0,menu.Position.Y.Offset-50)
+    playerPanel.BackgroundColor3 = Color3.fromRGB(28,28,38)
+    playerPanel.BackgroundTransparency = 0.09
+    playerPanel.BorderSizePixel = 0
+    playerPanel.AnchorPoint = Vector2.new(0,0)
+    playerPanel.ZIndex = 5
+
+    -- Drag do painel de jogadores por barra superior
+    local playerPanelDragBar = Instance.new("Frame", playerPanel)
+    playerPanelDragBar.Size = UDim2.new(1,0,0,28)
+    playerPanelDragBar.Position = UDim2.new(0,0,0,0)
+    playerPanelDragBar.BackgroundTransparency = 1
+    playerPanelDragBar.Name = "PlayerPanelDragBar"
+    makeDraggable(playerPanel, playerPanelDragBar)
+
+    local playerPanelTitle = Instance.new("TextLabel", playerPanelDragBar)
+    playerPanelTitle.Size = UDim2.new(1,-28,1,0)
+    playerPanelTitle.Position = UDim2.new(0,4,0,0)
+    playerPanelTitle.Text = "Jogadores"
+    playerPanelTitle.BackgroundTransparency = 1
+    playerPanelTitle.Font = Enum.Font.GothamBold
+    playerPanelTitle.TextSize = 15
+    playerPanelTitle.TextXAlignment = Enum.TextXAlignment.Left
+    playerPanelTitle.TextColor3 = ESP_COLOR
+
+    local closePlayerPanelBtn = Instance.new("TextButton", playerPanelDragBar)
+    closePlayerPanelBtn.Text = "✕"
+    closePlayerPanelBtn.Font = Enum.Font.GothamBlack
+    closePlayerPanelBtn.TextSize = 15
+    closePlayerPanelBtn.Size = UDim2.new(0,24,1,0)
+    closePlayerPanelBtn.Position = UDim2.new(1,-26,0,2)
+    closePlayerPanelBtn.BackgroundColor3 = Color3.fromRGB(32,32,32)
+    closePlayerPanelBtn.TextColor3 = Color3.fromRGB(255,90,90)
+    closePlayerPanelBtn.BorderSizePixel = 0
+
+    closePlayerPanelBtn.MouseButton1Click:Connect(function() playerPanel.Visible = false end)
+
+    local playerList = Instance.new("ScrollingFrame", playerPanel)
+    playerList.Size = UDim2.new(1, -10, 1, -36)
+    playerList.Position = UDim2.new(0,5,0,32)
     playerList.BackgroundTransparency = 0.1
     playerList.BackgroundColor3 = Color3.fromRGB(30,30,36)
     playerList.BorderSizePixel = 0
     playerList.ScrollBarThickness = 6
     playerList.CanvasSize = UDim2.new(0,0,0,0)
+    playerList.ZIndex = 6
 
     local function refreshPlayerList()
         playerList:ClearAllChildren()
@@ -360,23 +466,25 @@ local function setupMenu()
         local playersArr = Players:GetPlayers()
         for i,player in ipairs(playersArr) do
             local item = Instance.new("TextButton", playerList)
-            item.Size = UDim2.new(1,0,0,27)
+            item.Size = UDim2.new(1,0,0,22)
             item.Position = UDim2.new(0,0,0,y)
             item.BackgroundColor3 = (player == TARGET_PLAYER) and Color3.fromRGB(44,200,80) or Color3.fromRGB(38,38,40)
             item.Font = Enum.Font.Gotham
-            item.TextSize = 14
+            item.TextSize = 12
             item.TextColor3 = Color3.fromRGB(200,255,255)
             item.Text = string.format("%s  [%s]", player.DisplayName, player.Name)
             item.TextXAlignment = Enum.TextXAlignment.Left
             item.BorderSizePixel = 0
             item.Name = player.Name
-
+            item.ZIndex = 7
             item.MouseButton1Click:Connect(function()
                 TARGET_PLAYER = player
                 TARGET_ONLY = true
                 refreshPlayerList()
+                playerPanel.Visible = false
+                updateAllESP()
             end)
-            y = y + 27
+            y = y + 22
         end
         playerList.CanvasSize = UDim2.new(0,0,0,y)
     end
@@ -390,45 +498,10 @@ local function setupMenu()
         refreshPlayerList()
     end)
 
-    -- Botão: resetar alvo
-    local resetTargetBtn = Instance.new("TextButton", menu)
-    resetTargetBtn.Text = "ESP em todos"
-    resetTargetBtn.Size = UDim2.new(0.5,-10,0,28)
-    resetTargetBtn.Position = UDim2.new(0,10,1,-38)
-    resetTargetBtn.Font = Enum.Font.Gotham
-    resetTargetBtn.TextSize = 14
-    resetTargetBtn.BackgroundColor3 = Color3.fromRGB(33,44,33)
-    resetTargetBtn.TextColor3 = Color3.fromRGB(180,255,180)
-    resetTargetBtn.BorderSizePixel = 0
-    resetTargetBtn.MouseButton1Click:Connect(function()
-        TARGET_ONLY = false
-        TARGET_PLAYER = nil
-        refreshPlayerList()
-        updateAllESP()
-    end)
-
-    -- Botão: seguir câmera do alvo
-    local cameraBtn = Instance.new("TextButton", menu)
-    cameraBtn.Text = "Seguir câmera do alvo"
-    cameraBtn.Size = UDim2.new(0.5,-10,0,28)
-    cameraBtn.Position = UDim2.new(0.5,10,1,-38)
-    cameraBtn.Font = Enum.Font.Gotham
-    cameraBtn.TextSize = 14
-    cameraBtn.BackgroundColor3 = Color3.fromRGB(30,44,60)
-    cameraBtn.TextColor3 = Color3.fromRGB(200,225,255)
-    cameraBtn.BorderSizePixel = 0
-    local following = false
-    cameraBtn.MouseButton1Click:Connect(function()
-        if TARGET_PLAYER and TARGET_PLAYER.Character and TARGET_PLAYER.Character:FindFirstChild("HumanoidRootPart") then
-            following = not following
-            cameraBtn.TextColor3 = following and Color3.fromRGB(60,255,255) or Color3.fromRGB(200,225,255)
-        end
-    end)
-    RunService.RenderStepped:Connect(function()
-        if following and TARGET_PLAYER and TARGET_PLAYER.Character and TARGET_PLAYER.Character:FindFirstChild("HumanoidRootPart") then
-            Camera.CameraSubject = TARGET_PLAYER.Character.HumanoidRootPart
-        else
-            Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") or Camera.CameraSubject
+    playerPanelBtn.MouseButton1Click:Connect(function()
+        playerPanel.Visible = not playerPanel.Visible
+        if playerPanel.Visible then
+            refreshPlayerList()
         end
     end)
 end
