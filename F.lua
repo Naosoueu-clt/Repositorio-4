@@ -226,18 +226,17 @@ local function setupMenu()
     gui.Name = "ESPMenu"
     gui.ResetOnSpawn = false
 
-    -- Ícone de olho unicode
+    -- Ícone de olho unicode (só o olho, sem fundo)
     local eyeIcon = "👁"
 
-    -- Botão flutuante
     local floatBtn = Instance.new("TextButton")
     floatBtn.Name = "FloatButton"
     floatBtn.Size = UDim2.new(0,40,0,40)
     floatBtn.Position = UDim2.new(0,8,0.35,0)
-    floatBtn.BackgroundColor3 = ESP_COLOR
+    floatBtn.BackgroundTransparency = 1 -- Sem fundo azul/ciano
     floatBtn.Text = eyeIcon
     floatBtn.Font = Enum.Font.GothamBlack
-    floatBtn.TextSize = 26
+    floatBtn.TextSize = 28
     floatBtn.TextColor3 = Color3.new(1,1,1)
     floatBtn.BorderSizePixel = 0
     floatBtn.AutoButtonColor = true
@@ -250,7 +249,7 @@ local function setupMenu()
     menu.Name = "MenuFrame"
     menu.Size = UDim2.new(0,210,0,220)
     menu.Position = UDim2.new(0,55,0.35,0)
-    menu.BackgroundColor3 = Color3.fromRGB(24,24,28)
+    menu.BackgroundColor3 = Color3.fromRGB(40,40,40) -- Cinza mais neutro
     menu.BorderSizePixel = 0
     menu.Visible = false
     menu.AnchorPoint = Vector2.new(0,0.5)
@@ -391,33 +390,33 @@ local function setupMenu()
         updateAllESP()
     end)
 
-    -- Botão para abrir painel de jogadores
+    -- Botão para abrir painel de jogadores (agora acima do botão "Mais")
     local playerPanelBtn = Instance.new("TextButton", menu)
     playerPanelBtn.Text = "Selecionar Jogador"
     playerPanelBtn.Size = UDim2.new(0.93,0,0,24)
-    playerPanelBtn.Position = UDim2.new(0.035,0,0,160)
+    playerPanelBtn.Position = UDim2.new(0.035,0,1,-54)
     playerPanelBtn.Font = Enum.Font.Gotham
     playerPanelBtn.TextSize = 13
     playerPanelBtn.BackgroundColor3 = Color3.fromRGB(30,44,60)
     playerPanelBtn.TextColor3 = Color3.fromRGB(200,225,255)
     playerPanelBtn.BorderSizePixel = 0
 
-    -- Botão: MAIS (abre painel de funções extras)
+    -- Botão: MAIS (agora abaixo do botão de jogadores)
     local moreBtn = Instance.new("TextButton", menu)
     moreBtn.Text = "Mais"
     moreBtn.Size = UDim2.new(0.93,0,0,22)
-    moreBtn.Position = UDim2.new(0.035,0,1,-26)
+    moreBtn.Position = UDim2.new(0.035,0,1,-28)
     moreBtn.Font = Enum.Font.Gotham
     moreBtn.TextSize = 13
     moreBtn.BackgroundColor3 = Color3.fromRGB(34,34,54)
     moreBtn.TextColor3 = Color3.fromRGB(215,215,255)
     moreBtn.BorderSizePixel = 0
 
-    -- Botão: resetar alvo
+    -- Botão: resetar alvo (agora está acima dos botões de baixo)
     local resetTargetBtn = Instance.new("TextButton", menu)
     resetTargetBtn.Text = "ESP em todos"
     resetTargetBtn.Size = UDim2.new(0.45,0,0,22)
-    resetTargetBtn.Position = UDim2.new(0.035,0,1,-54)
+    resetTargetBtn.Position = UDim2.new(0.035,0,1,-80)
     resetTargetBtn.Font = Enum.Font.Gotham
     resetTargetBtn.TextSize = 12
     resetTargetBtn.BackgroundColor3 = Color3.fromRGB(33,44,33)
@@ -433,7 +432,7 @@ local function setupMenu()
     local cameraBtn = Instance.new("TextButton", menu)
     cameraBtn.Text = "Seguir câmera"
     cameraBtn.Size = UDim2.new(0.45,0,0,22)
-    cameraBtn.Position = UDim2.new(0.52,0,1,-54)
+    cameraBtn.Position = UDim2.new(0.52,0,1,-80)
     cameraBtn.Font = Enum.Font.Gotham
     cameraBtn.TextSize = 12
     cameraBtn.BackgroundColor3 = Color3.fromRGB(30,44,60)
@@ -461,8 +460,8 @@ local function setupMenu()
     playerPanel.Visible = false
     playerPanel.Size = UDim2.new(0,180,0,200)
     playerPanel.Position = UDim2.new(0,menu.Position.X.Offset+220,0,menu.Position.Y.Offset-50)
-    playerPanel.BackgroundColor3 = Color3.fromRGB(28,28,38)
-    playerPanel.BackgroundTransparency = 0.09
+    playerPanel.BackgroundColor3 = Color3.fromRGB(40,40,40) -- Cinza igual ao menu
+    playerPanel.BackgroundTransparency = 0.05
     playerPanel.BorderSizePixel = 0
     playerPanel.AnchorPoint = Vector2.new(0,0)
     playerPanel.ZIndex = 5
@@ -558,8 +557,8 @@ local function setupMenu()
     morePanel.Visible = false
     morePanel.Size = UDim2.new(0,180,0,170)
     morePanel.Position = UDim2.new(0,menu.Position.X.Offset+220,0,menu.Position.Y.Offset+20)
-    morePanel.BackgroundColor3 = Color3.fromRGB(28,28,38)
-    morePanel.BackgroundTransparency = 0.09
+    morePanel.BackgroundColor3 = Color3.fromRGB(40,40,40) -- Cinza igual ao menu
+    morePanel.BackgroundTransparency = 0.05
     morePanel.BorderSizePixel = 0
     morePanel.AnchorPoint = Vector2.new(0,0)
     morePanel.ZIndex = 6
@@ -599,14 +598,14 @@ local function setupMenu()
     noclipBtn.Position = UDim2.new(0.05,0,0,36)
     noclipBtn.Font = Enum.Font.Gotham
     noclipBtn.TextSize = 13
-    noclipBtn.BackgroundColor3 = Color3.fromRGB(40,40,44)
-    noclipBtn.TextColor3 = Color3.fromRGB(200,255,255)
+    noclipBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    noclipBtn.TextColor3 = Color3.fromRGB(255,255,255) -- Branco
     noclipBtn.BorderSizePixel = 0
 
     noclipBtn.MouseButton1Click:Connect(function()
         noclipActive = not noclipActive
         noclipBtn.Text = "Noclip: " .. (noclipActive and "ON" or "OFF")
-        noclipBtn.TextColor3 = noclipActive and Color3.fromRGB(100,255,100) or Color3.fromRGB(200,255,255)
+        noclipBtn.TextColor3 = noclipActive and Color3.fromRGB(100,255,100) or Color3.fromRGB(255,255,255)
     end)
 
     -- WalkSpeed (slider vertical fake)
@@ -626,8 +625,8 @@ local function setupMenu()
     wsBox.Text = tostring(walkspeed)
     wsBox.Font = Enum.Font.Gotham
     wsBox.TextSize = 12
-    wsBox.BackgroundColor3 = Color3.fromRGB(20,20,20)
-    wsBox.TextColor3 = Color3.fromRGB(255,255,255)
+    wsBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    wsBox.TextColor3 = Color3.fromRGB(255,255,255) -- Branco
     wsBox.BorderSizePixel = 0
     wsBox.ClearTextOnFocus = false
 
@@ -657,8 +656,8 @@ local function setupMenu()
     jpBox.Text = tostring(jumppower)
     jpBox.Font = Enum.Font.Gotham
     jpBox.TextSize = 12
-    jpBox.BackgroundColor3 = Color3.fromRGB(20,20,20)
-    jpBox.TextColor3 = Color3.fromRGB(255,255,255)
+    jpBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    jpBox.TextColor3 = Color3.fromRGB(255,255,255) -- Branco
     jpBox.BorderSizePixel = 0
     jpBox.ClearTextOnFocus = false
 
