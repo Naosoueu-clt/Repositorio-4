@@ -1,7 +1,7 @@
 --[[ 
   ESP Avançado para Roblox (Lua) - Repaginado e Revisado
   Feito por Copilot - Para uso em jogos próprios/autorizados
-  Rework: Ícone de olho flutuante, ESP padrão desligado, botões revisados, frases aleatórias expandidas, correções gerais.
+  Atualização: Câmera ESP robusta, calculadora aprimorada, frases dinâmicas com nomes de jogadores.
 --]]
 
 -- SERVIÇOS E VARIÁVEIS INICIAIS
@@ -207,7 +207,7 @@ RunService.RenderStepped:Connect(function()
     applyStats()
 end)
 
--- Funções de câmera
+-- Funções de câmera do próprio jogador
 local function setCameraMode()
     if CAMERA_LOCKED and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         Camera.CameraType = Enum.CameraType.Scriptable
@@ -252,6 +252,63 @@ local function setupMenuIcon(openCallback)
     end)
 
     return floatBtn
+end
+
+-- CÂMERA ESP: seguir alvo robusto
+local following = false
+local function followTargetCamera()
+    RunService:BindToRenderStep("FollowTargetCam", Enum.RenderPriority.Camera.Value + 1, function()
+        if following and ESP_ENABLED and TARGET_PLAYER and TARGET_PLAYER.Character and TARGET_PLAYER.Character:FindFirstChild("HumanoidRootPart") then
+            Camera.CameraSubject = TARGET_PLAYER.Character.HumanoidRootPart
+        else
+            Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            RunService:UnbindFromRenderStep("FollowTargetCam")
+        end
+    end)
+end
+
+-- FRASES DINÂMICAS COM NOMES DE JOGADORES
+local frasesBase = {
+    "O pato está no comando.",
+    "Proibido pensar em nada por mais de 3 segundos.",
+    "Nunca desafie um micro-ondas ao xadrez.",
+    "Seu clique abriu um portal interdimensional.",
+    "Faltam 0 dias para o fim do começo.",
+    "Sopa no teclado? Agora sim, desempenho gamer.",
+    "{player} está sendo observado pelo pato.",
+    "{player} saiu voando com um sanduíche.",
+    "Cuidado, {player}! O Wi-Fi caiu.",
+    "{player1} e {player2} estão disputando quem pisca mais rápido.",
+    "{player} ativou o modo sapo.",
+    "{player} perdeu no campeonato de piscadas.",
+    "Nunca confie em um sanduíche que te encara.",
+    "O Wi-Fi caiu, mas {player} levantou.",
+    "{player1} e {player2} abriram um portal interdimensional.",
+    "Apenas zebras entendem o código de {player}."
+}
+local function pickPlayer()
+    local plist = Players:GetPlayers()
+    if #plist == 0 then return "Alguém" end
+    return plist[math.random(1,#plist)].DisplayName
+end
+local function pick2Players()
+    local plist = Players:GetPlayers()
+    if #plist < 2 then return pickPlayer(), pickPlayer() end
+    local p1 = plist[math.random(1,#plist)]
+    local p2 = plist[math.random(1,#plist)]
+    while p2 == p1 and #plist > 1 do p2 = plist[math.random(1,#plist)] end
+    return p1.DisplayName, p2.DisplayName
+end
+local function gerarFrase()
+    local f = frasesBase[math.random(1,#frasesBase)]
+    local p1, p2 = pickPlayer(), pickPlayer()
+    if f:find("{player1}") then
+        p1,p2 = pick2Players()
+        f = f:gsub("{player1}", p1):gsub("{player2}", p2)
+    elseif f:find("{player}") then
+        f = f:gsub("{player}", p1)
+    end
+    return f
 end
 
 -- PAINEL PRINCIPAL REWORK
@@ -349,45 +406,17 @@ local function setupMainPanel()
 
     closeBtn.MouseButton1Click:Connect(function() main.Visible = false end)
 
-    -- Frases aleatórias
-    local frases = {
-        "Você é incrível!",
-        "Roblox é melhor com scripts ;)",
-        "Lembre-se: 42 é a resposta.",
-        "Copilot rules!",
-        "Nunca desista dos memes.",
-        "Desinstale sua geladeira, ela sabe demais.",
-        "O Wi-Fi caiu, mas eu levantei.",
-        "Você piscou. Perdeu o campeonato de piscadas.",
-        "1+1=janela.",
-        "Evite pensamentos quadrados, pense em trapézios.",
-        "O pato tá no comando. Ninguém questiona o pato.",
-        "Seu clique abriu um portal interdimensional.",
-        "Proibido pensar em nada por mais de 3 segundos.",
-        "Sopa no teclado? Agora sim, desempenho gamer.",
-        "Nunca confie em um sanduíche que te encara.",
-        "Aviso: este botão explode bolachas.",
-        "Tocar no chão ativa o modo sapo.",
-        "Apenas zebras entendem o código.",
-        "Nunca desafie um micro-ondas ao xadrez.",
-        "Esta frase está em manutenção.",
-        "Cuidado: pensamento em loop detectado.",
-        "Se você entendeu, está lendo errado.",
-        "Respire com moderação.",
-        "A gelatina venceu a gravidade novamente.",
-        "Faltam 0 dias para o fim do começo.",
-        "Pare de clicar!",
-        "UWU"
-    }
+    -- FRASES DINÂMICAS
     btnSecret2.MouseButton1Click:Connect(function()
-        local msg = frases[math.random(1,#frases)]
+        local msg = gerarFrase()
         StarterGui:SetCore("SendNotification",{
             Title = "Mensagem Aleatória",
             Text = msg,
             Duration = 3
         })
     end)
-    -- Calculadora básica
+
+    -- CALCULADORA MELHORADA
     btnSecret.MouseButton1Click:Connect(function()
         local calcGui = Instance.new("ScreenGui", gui)
         calcGui.Name = "CalcGui"
@@ -405,7 +434,7 @@ local function setupMainPanel()
         tb.TextSize = 16
         tb.BackgroundColor3 = Color3.fromRGB(60,60,70)
         tb.TextColor3 = Color3.fromRGB(255,255,255)
-        tb.PlaceholderText = "Digite a expressão..."
+        tb.PlaceholderText = "Digite: 5+2×3-1÷2"
         local btn = Instance.new("TextButton", frame)
         btn.Size = UDim2.new(1,-10,0,30)
         btn.Position = UDim2.new(0,5,0,45)
@@ -434,7 +463,10 @@ local function setupMainPanel()
         closeCalc.BorderSizePixel = 0
         closeCalc.MouseButton1Click:Connect(function() calcGui:Destroy() end)
         btn.MouseButton1Click:Connect(function()
-            local exp = tb.Text:gsub("[^%d%+%-*/%.%(%) ]","")
+            local exp = tb.Text
+            exp = exp:gsub(",",".") -- aceita vírgula decimal
+            exp = exp:gsub("×","*"):gsub("x", "*"):gsub("÷","/"):gsub("−","-")
+            exp = exp:gsub("[^%d%.%+%-%*/%(%) ]","") -- só aceita números, operadores, ponto, parênteses
             local s,ret = pcall(function() return loadstring("return "..exp)() end)
             out.Text = s and tostring(ret) or "Erro"
         end)
@@ -481,6 +513,10 @@ local function setupMainPanel()
             ESP_ENABLED = not ESP_ENABLED
             toggleBtn.Text = "ESP: " .. (ESP_ENABLED and "ON" or "OFF")
             toggleBtn.TextColor3 = ESP_ENABLED and ESP_COLOR or Color3.fromRGB(255,60,60)
+            if not ESP_ENABLED then
+                following = false -- desliga seguir alvo se desligar ESP
+                RunService:UnbindFromRenderStep("FollowTargetCam")
+            end
             updateAllESP()
         end)
 
@@ -583,18 +619,16 @@ local function setupMainPanel()
         cameraBtn.BackgroundColor3 = Color3.fromRGB(30,44,60)
         cameraBtn.TextColor3 = Color3.fromRGB(200,225,255)
         cameraBtn.BorderSizePixel = 0
-        local following = false
         cameraBtn.MouseButton1Click:Connect(function()
             if TARGET_PLAYER and TARGET_PLAYER.Character and TARGET_PLAYER.Character:FindFirstChild("HumanoidRootPart") then
                 following = not following
                 cameraBtn.TextColor3 = following and Color3.fromRGB(60,255,255) or Color3.fromRGB(200,225,255)
-            end
-        end)
-        RunService.RenderStepped:Connect(function()
-            if following and TARGET_PLAYER and TARGET_PLAYER.Character and TARGET_PLAYER.Character:FindFirstChild("HumanoidRootPart") and ESP_ENABLED then
-                Camera.CameraSubject = TARGET_PLAYER.Character.HumanoidRootPart
-            elseif not following or not ESP_ENABLED then
-                Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") or Camera.CameraSubject
+                if following then
+                    followTargetCamera()
+                else
+                    Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    RunService:UnbindFromRenderStep("FollowTargetCam")
+                end
             end
         end)
 
