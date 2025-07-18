@@ -1,5 +1,5 @@
 --[[ 
-  ESP Avançado para Roblox (Lua) - Painel Jogador corrigido, Easter Egg animado, "Faz nada" no ESP alvo
+  ESP Avançado para Roblox (Lua) - Melhorias gráficas, desligar tudo, pulo infinito e mensagens fixas por função
   Feito por Copilot - Para uso em jogos próprios/autorizados
 --]]
 
@@ -28,10 +28,10 @@ local TARGET_ONLY = false
 local noclipActive = false
 local walkspeed = 16
 local jumppower = 50
-local CAMERA_FIRST_PERSON = false
-local CAMERA_LOCKED = false
 local DEFAULT_WALKSPEED = 16
 local DEFAULT_JUMPPOWER = 50
+local CAMERA_FIRST_PERSON = false
+local INFINITE_JUMP = false
 
 -- UTILS
 local function makeDraggable(frame, dragBar)
@@ -62,6 +62,16 @@ local function makeDraggable(frame, dragBar)
             )
         end
     end)
+end
+
+local function showMessage(text, color)
+    StarterGui:SetCore("SendNotification",{
+        Title = "Script",
+        Text = text,
+        Duration = 2.3,
+        Icon = "",
+        Button1 = "Ok"
+    })
 end
 
 local function showLoadingScreen()
@@ -189,6 +199,23 @@ RunService.Stepped:Connect(function()
     end
 end)
 
+-- PULO INFINITO
+local infiniteJumpConn
+local function setInfiniteJump(state)
+    INFINITE_JUMP = state
+    if state then
+        if infiniteJumpConn then infiniteJumpConn:Disconnect() end
+        infiniteJumpConn = UserInputService.JumpRequest:Connect(function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChildOfClass("Humanoid") then
+                char:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end)
+    else
+        if infiniteJumpConn then infiniteJumpConn:Disconnect() infiniteJumpConn = nil end
+    end
+end
+
 local function applyStats()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
         local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -204,12 +231,8 @@ RunService.RenderStepped:Connect(function()
     applyStats()
 end)
 
--- Funções de câmera do próprio jogador
 local function setCameraMode()
-    if CAMERA_LOCKED and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        Camera.CameraType = Enum.CameraType.Scriptable
-        Camera.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0, 10, 0)
-    elseif CAMERA_FIRST_PERSON then
+    if CAMERA_FIRST_PERSON then
         Camera.CameraType = Enum.CameraType.Custom
         Camera.FieldOfView = 70
         LocalPlayer.CameraMinZoomDistance = 0.5
@@ -362,7 +385,31 @@ local function setupMainPanel()
     hello.TextSize = 14
     hello.TextColor3 = Color3.fromRGB(150,230,255)
 
-    -- Easter Egg (Nada) - agora com animação de fade e fundo esticado
+    -- Botão DESLIGAR TUDO
+    local btnResetAll = Instance.new("TextButton", main)
+    btnResetAll.Size = UDim2.new(0.9,0,0,30)
+    btnResetAll.Position = UDim2.new(0.05,0,0,178)
+    btnResetAll.Text = "Desligar tudo / Padrão"
+    btnResetAll.Font = Enum.Font.GothamBlack
+    btnResetAll.TextSize = 15
+    btnResetAll.BackgroundColor3 = Color3.fromRGB(255,70,70)
+    btnResetAll.TextColor3 = Color3.fromRGB(255,255,255)
+    btnResetAll.BorderSizePixel = 0
+    btnResetAll.MouseButton1Click:Connect(function()
+        -- resetar todas as opções
+        ESP_ENABLED = false
+        TARGET_ONLY = false
+        TARGET_PLAYER = nil
+        noclipActive = false
+        walkspeed = DEFAULT_WALKSPEED
+        jumppower = DEFAULT_JUMPPOWER
+        CAMERA_FIRST_PERSON = false
+        setInfiniteJump(false)
+        updateAllESP()
+        showMessage("Todas as funções desligadas e padrões restaurados.", Color3.fromRGB(255,70,70))
+    end)
+
+    -- Easter Egg (Nada) - animado
     local eggBtn = Instance.new("TextBox", main)
     eggBtn.PlaceholderText = "Digite algo..."
     eggBtn.Font = Enum.Font.Gotham
@@ -381,7 +428,6 @@ local function setupMainPanel()
     wrong.Text = ""
     wrong.Font = Enum.Font.GothamBold
     wrong.TextSize = 12
-
     local function showEgg()
         local eggGui = Instance.new("ScreenGui", main.Parent)
         local frame = Instance.new("Frame", eggGui)
@@ -391,7 +437,6 @@ local function setupMainPanel()
         frame.BackgroundColor3 = Color3.fromRGB(60,0,120)
         frame.BackgroundTransparency = 1
         frame.BorderSizePixel = 0
-        -- animação de cor e fade in
         coroutine.wrap(function()
             local colors = {
                 Color3.fromRGB(60,0,120), Color3.fromRGB(0,180,255), Color3.fromRGB(255,0,100), Color3.fromRGB(0,220,60)
@@ -602,6 +647,7 @@ local function setupMainPanel()
             toggleBtn.Text = "ESP: " .. (ESP_ENABLED and "ON" or "OFF")
             toggleBtn.TextColor3 = ESP_ENABLED and ESP_COLOR or Color3.fromRGB(255,60,60)
             updateAllESP()
+            showMessage(ESP_ENABLED and "Miopia curado." or "Você tem miopia.")
         end)
 
         -- Jogadores no servidor
@@ -693,7 +739,7 @@ local function setupMainPanel()
             updateAllESP()
         end)
 
-        -- Botão: "Faz nada" no lugar do seguir câmera
+        -- Botão: "Faz nada"
         local fazNadaBtn = Instance.new("TextButton", espPanel)
         fazNadaBtn.Text = "Faz nada"
         fazNadaBtn.Size = UDim2.new(0.45,0,0,20)
@@ -704,11 +750,7 @@ local function setupMainPanel()
         fazNadaBtn.TextColor3 = Color3.fromRGB(200,225,255)
         fazNadaBtn.BorderSizePixel = 0
         fazNadaBtn.MouseButton1Click:Connect(function()
-            StarterGui:SetCore("SendNotification",{
-                Title = "Faz nada...",
-                Text = "Não funcionou, então desisti '-'",
-                Duration = 2.3
-            })
+            showMessage("Não funcionou, então desisti '-'", Color3.fromRGB(255,60,60))
         end)
 
         -- Painel de seleção de jogadores
@@ -813,7 +855,7 @@ local function setupMainPanel()
         if playerPanel and playerPanel.Parent then playerPanel.Visible = true return end
         playerPanel = Instance.new("Frame", gui)
         playerPanel.Name = "PlayerPanel"
-        playerPanel.Size = UDim2.new(0,230,0,210)
+        playerPanel.Size = UDim2.new(0,230,0,228)
         playerPanel.Position = UDim2.new(0.5,140,0.5,-105)
         playerPanel.BackgroundColor3 = Color3.fromRGB(36,44,36)
         playerPanel.BackgroundTransparency = 0.02
@@ -844,6 +886,7 @@ local function setupMainPanel()
             noclipActive = not noclipActive
             noclipBtn.Text = "Noclip: " .. (noclipActive and "ON" or "OFF")
             noclipBtn.TextColor3 = noclipActive and Color3.fromRGB(100,255,100) or Color3.fromRGB(255,255,255)
+            showMessage(noclipActive and "Modo fantasma: ON" or "Modo fantasma: OFF")
         end)
 
         -- WalkSpeed
@@ -931,28 +974,27 @@ local function setupMainPanel()
         camToggleBtn.BorderSizePixel = 0
         camToggleBtn.MouseButton1Click:Connect(function()
             CAMERA_FIRST_PERSON = not CAMERA_FIRST_PERSON
-            CAMERA_LOCKED = false
             camToggleBtn.Text = "Câmera 1ª pessoa: " .. (CAMERA_FIRST_PERSON and "ON" or "OFF")
             camToggleBtn.TextColor3 = CAMERA_FIRST_PERSON and Color3.fromRGB(80,255,255) or Color3.fromRGB(160,220,255)
             setCameraMode()
         end)
 
-        -- Botão de câmera fixa
-        local camLockBtn = Instance.new("TextButton", playerPanel)
-        camLockBtn.Text = "Câmera fixa: OFF"
-        camLockBtn.Size = UDim2.new(0.92,0,0,22)
-        camLockBtn.Position = UDim2.new(0.04,0,0,188)
-        camLockBtn.Font = Enum.Font.Gotham
-        camLockBtn.TextSize = 12
-        camLockBtn.BackgroundColor3 = Color3.fromRGB(64,32,32)
-        camLockBtn.TextColor3 = Color3.fromRGB(255,200,200)
-        camLockBtn.BorderSizePixel = 0
-        camLockBtn.MouseButton1Click:Connect(function()
-            CAMERA_LOCKED = not CAMERA_LOCKED
-            CAMERA_FIRST_PERSON = false
-            camLockBtn.Text = "Câmera fixa: " .. (CAMERA_LOCKED and "ON" or "OFF")
-            camLockBtn.TextColor3 = CAMERA_LOCKED and Color3.fromRGB(255,160,160) or Color3.fromRGB(255,200,200)
-            setCameraMode()
+        -- Botão de pulo infinito
+        local infJumpBtn = Instance.new("TextButton", playerPanel)
+        infJumpBtn.Text = "Pulo infinito: OFF"
+        infJumpBtn.Size = UDim2.new(0.92,0,0,22)
+        infJumpBtn.Position = UDim2.new(0.04,0,0,190)
+        infJumpBtn.Font = Enum.Font.Gotham
+        infJumpBtn.TextSize = 12
+        infJumpBtn.BackgroundColor3 = Color3.fromRGB(44,64,120)
+        infJumpBtn.TextColor3 = Color3.fromRGB(220,220,255)
+        infJumpBtn.BorderSizePixel = 0
+        infJumpBtn.MouseButton1Click:Connect(function()
+            INFINITE_JUMP = not INFINITE_JUMP
+            setInfiniteJump(INFINITE_JUMP)
+            infJumpBtn.Text = "Pulo infinito: " .. (INFINITE_JUMP and "ON" or "OFF")
+            infJumpBtn.TextColor3 = INFINITE_JUMP and Color3.fromRGB(120,255,255) or Color3.fromRGB(220,220,255)
+            showMessage(INFINITE_JUMP and "Agora você é um canguru!" or "Pulo infinito desligado.")
         end)
 
         -- Fechar painel jogador
