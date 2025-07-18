@@ -1,7 +1,7 @@
 --[[ 
-  ESP Avançado para Roblox (Lua) - Repaginado
+  ESP Avançado para Roblox (Lua) - Repaginado e Revisado
   Feito por Copilot - Para uso em jogos próprios/autorizados
-  Rework: Separação de funções ESP e Jogador, painel principal com mensagens, botões extras, etc.
+  Rework: Ícone de olho flutuante, ESP padrão desligado, botões revisados, frases aleatórias expandidas, correções gerais.
 --]]
 
 -- SERVIÇOS E VARIÁVEIS INICIAIS
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 
 -- ESP VARS
-local ESP_ENABLED = true
+local ESP_ENABLED = false -- ESP agora inicia desligado
 local ESP_COLOR = Color3.fromRGB(0,255,255)
 local OUTLINE_COLOR = Color3.fromRGB(255,255,0)
 local FILL_TRANSPARENCY = 0.7
@@ -146,6 +146,8 @@ local function updateESP(player)
     if player == LocalPlayer then return end
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then removeESP(char) return end
+    -- Se ESP está desligado, não mostra
+    if not ESP_ENABLED then removeESP(char) return end
     if TARGET_ONLY and player ~= TARGET_PLAYER then removeESP(char) return end
     local distance = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart"))
         and (char.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
@@ -164,11 +166,7 @@ end
 
 local function updateAllESP()
     for _, player in ipairs(Players:GetPlayers()) do
-        if ESP_ENABLED then
-            updateESP(player)
-        else
-            if player.Character then removeESP(player.Character) end
-        end
+        updateESP(player)
     end
 end
 
@@ -229,6 +227,33 @@ local function setCameraMode()
     end
 end
 
+-- ÍCONE PARA ABRIR O MENU PRINCIPAL
+local function setupMenuIcon(openCallback)
+    local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+    gui.Name = "ScriptMenuIcon"
+    gui.ResetOnSpawn = false
+
+    local floatBtn = Instance.new("TextButton")
+    floatBtn.Name = "FloatButton"
+    floatBtn.Size = UDim2.new(0,40,0,40)
+    floatBtn.Position = UDim2.new(0,8,0.4,0)
+    floatBtn.BackgroundTransparency = 1
+    floatBtn.Text = "👁"
+    floatBtn.Font = Enum.Font.GothamBlack
+    floatBtn.TextSize = 28
+    floatBtn.TextColor3 = Color3.new(1,1,1)
+    floatBtn.BorderSizePixel = 0
+    floatBtn.AutoButtonColor = true
+    floatBtn.Parent = gui
+
+    makeDraggable(floatBtn)
+    floatBtn.MouseButton1Click:Connect(function()
+        if openCallback then openCallback() end
+    end)
+
+    return floatBtn
+end
+
 -- PAINEL PRINCIPAL REWORK
 local function setupMainPanel()
     local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
@@ -243,6 +268,7 @@ local function setupMainPanel()
     main.BackgroundColor3 = Color3.fromRGB(30,30,36)
     main.BackgroundTransparency = 0.04
     main.BorderSizePixel = 0
+    main.Visible = false
 
     makeDraggable(main)
 
@@ -323,20 +349,42 @@ local function setupMainPanel()
 
     closeBtn.MouseButton1Click:Connect(function() main.Visible = false end)
 
-    -- Mensagem aleatória
+    -- Frases aleatórias
+    local frases = {
+        "Você é incrível!",
+        "Roblox é melhor com scripts ;)",
+        "Lembre-se: 42 é a resposta.",
+        "Copilot rules!",
+        "Nunca desista dos memes.",
+        "Desinstale sua geladeira, ela sabe demais.",
+        "O Wi-Fi caiu, mas eu levantei.",
+        "Você piscou. Perdeu o campeonato de piscadas.",
+        "1+1=janela.",
+        "Evite pensamentos quadrados, pense em trapézios.",
+        "O pato tá no comando. Ninguém questiona o pato.",
+        "Seu clique abriu um portal interdimensional.",
+        "Proibido pensar em nada por mais de 3 segundos.",
+        "Sopa no teclado? Agora sim, desempenho gamer.",
+        "Nunca confie em um sanduíche que te encara.",
+        "Aviso: este botão explode bolachas.",
+        "Tocar no chão ativa o modo sapo.",
+        "Apenas zebras entendem o código.",
+        "Nunca desafie um micro-ondas ao xadrez.",
+        "Esta frase está em manutenção.",
+        "Cuidado: pensamento em loop detectado.",
+        "Se você entendeu, está lendo errado.",
+        "Respire com moderação.",
+        "A gelatina venceu a gravidade novamente.",
+        "Faltam 0 dias para o fim do começo.",
+        "Pare de clicar!",
+        "UWU"
+    }
     btnSecret2.MouseButton1Click:Connect(function()
-        local msgs = {
-            "Você é incrível!",
-            "Roblox é melhor com scripts ;)",
-            "Lembre-se: 42 é a resposta.",
-            "Copilot rules!",
-            "Nunca desista dos memes."
-        }
-        local msg = msgs[math.random(1,#msgs)]
+        local msg = frases[math.random(1,#frases)]
         StarterGui:SetCore("SendNotification",{
-            Title = "Mensagem Secreta",
+            Title = "Mensagem Aleatória",
             Text = msg,
-            Duration = 2
+            Duration = 3
         })
     end)
     -- Calculadora básica
@@ -423,11 +471,11 @@ local function setupMainPanel()
         local toggleBtn = Instance.new("TextButton", espPanel)
         toggleBtn.Size = UDim2.new(0.9,0,0,28)
         toggleBtn.Position = UDim2.new(0.05,0,0,38)
-        toggleBtn.Text = "ESP: ON"
+        toggleBtn.Text = "ESP: OFF"
         toggleBtn.Font = Enum.Font.Gotham
         toggleBtn.TextSize = 15
         toggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,44)
-        toggleBtn.TextColor3 = ESP_COLOR
+        toggleBtn.TextColor3 = Color3.fromRGB(255,60,60)
         toggleBtn.BorderSizePixel = 0
         toggleBtn.MouseButton1Click:Connect(function()
             ESP_ENABLED = not ESP_ENABLED
@@ -543,9 +591,9 @@ local function setupMainPanel()
             end
         end)
         RunService.RenderStepped:Connect(function()
-            if following and TARGET_PLAYER and TARGET_PLAYER.Character and TARGET_PLAYER.Character:FindFirstChild("HumanoidRootPart") then
+            if following and TARGET_PLAYER and TARGET_PLAYER.Character and TARGET_PLAYER.Character:FindFirstChild("HumanoidRootPart") and ESP_ENABLED then
                 Camera.CameraSubject = TARGET_PLAYER.Character.HumanoidRootPart
-            else
+            elseif not following or not ESP_ENABLED then
                 Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") or Camera.CameraSubject
             end
         end)
@@ -810,6 +858,11 @@ local function setupMainPanel()
 
     btnESP.MouseButton1Click:Connect(setupESPPanel)
     btnPlayer.MouseButton1Click:Connect(setupPlayerPanel)
+
+    -- Ícone de olho para abrir o menu principal
+    local iconBtn = setupMenuIcon(function()
+        main.Visible = not main.Visible
+    end)
 end
 
 coroutine.wrap(showLoadingScreen)()
@@ -818,11 +871,5 @@ setupMainPanel()
 
 RunService.RenderStepped:Connect(function()
     setCameraMode()
-    if ESP_ENABLED then
-        updateAllESP()
-    else
-        for _,player in ipairs(Players:GetPlayers()) do
-            if player.Character then removeESP(player.Character) end
-        end
-    end
+    updateAllESP()
 end)
