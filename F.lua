@@ -1,5 +1,5 @@
 --[[ 
-  ESP Avançado para Roblox (Lua) - Revisão ESP Câmera, Frases Antigas+Novas, Easter Egg "Nada"
+  ESP Avançado para Roblox (Lua) - Painel Jogador corrigido, Easter Egg animado, "Faz nada" no ESP alvo
   Feito por Copilot - Para uso em jogos próprios/autorizados
 --]]
 
@@ -13,7 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 
 -- ESP VARS
-local ESP_ENABLED = false -- ESP agora inicia desligado
+local ESP_ENABLED = false
 local ESP_COLOR = Color3.fromRGB(0,255,255)
 local OUTLINE_COLOR = Color3.fromRGB(255,255,0)
 local FILL_TRANSPARENCY = 0.7
@@ -251,28 +251,6 @@ local function setupMenuIcon(openCallback)
     return floatBtn
 end
 
--- REFATORADO: CÂMERA ESP SEGUINDO ALVO SEMPRE
-local following = false
-local function followTargetCamera()
-    local lastTarget = nil
-
-    RunService:UnbindFromRenderStep("FollowTargetCam")
-    RunService:BindToRenderStep("FollowTargetCam", Enum.RenderPriority.Camera.Value + 1, function()
-        if not following or not ESP_ENABLED or not TARGET_PLAYER then
-            Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            RunService:UnbindFromRenderStep("FollowTargetCam")
-            return
-        end
-        local char = TARGET_PLAYER.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            Camera.CameraSubject = char.HumanoidRootPart
-            lastTarget = char.HumanoidRootPart
-        elseif lastTarget then
-            Camera.CameraSubject = lastTarget -- mantém último válido até novo aparecer
-        end
-    end)
-end
-
 -- SISTEMA DE FRASES: antigas + novas + dinâmicas
 local frasesFixas = {
     "Você é incrível!",
@@ -330,7 +308,7 @@ local function pick2Players()
     return p1.DisplayName, p2.DisplayName
 end
 local function gerarFrase()
-    if math.random() < 0.6 then -- maioria frases fixas
+    if math.random() < 0.6 then
         return frasesFixas[math.random(1,#frasesFixas)]
     else
         local f = frasesExtras[math.random(1,#frasesExtras)]
@@ -384,7 +362,7 @@ local function setupMainPanel()
     hello.TextSize = 14
     hello.TextColor3 = Color3.fromRGB(150,230,255)
 
-    -- Easter Egg (Nada)
+    -- Easter Egg (Nada) - agora com animação de fade e fundo esticado
     local eggBtn = Instance.new("TextBox", main)
     eggBtn.PlaceholderText = "Digite algo..."
     eggBtn.Font = Enum.Font.Gotham
@@ -403,20 +381,24 @@ local function setupMainPanel()
     wrong.Text = ""
     wrong.Font = Enum.Font.GothamBold
     wrong.TextSize = 12
+
     local function showEgg()
         local eggGui = Instance.new("ScreenGui", main.Parent)
         local frame = Instance.new("Frame", eggGui)
         frame.AnchorPoint = Vector2.new(0.5,0.5)
         frame.Position = UDim2.new(0.5,0,0.5,0)
-        frame.Size = UDim2.new(0,280,0,110)
+        frame.Size = UDim2.new(0,420,0,100)
         frame.BackgroundColor3 = Color3.fromRGB(60,0,120)
+        frame.BackgroundTransparency = 1
         frame.BorderSizePixel = 0
-        -- animação
+        -- animação de cor e fade in
         coroutine.wrap(function()
             local colors = {
                 Color3.fromRGB(60,0,120), Color3.fromRGB(0,180,255), Color3.fromRGB(255,0,100), Color3.fromRGB(0,220,60)
             }
             local i = 0
+            TweenService:Create(frame,TweenInfo.new(0.7),{BackgroundTransparency=0.12}):Play()
+            wait(0.7)
             while eggGui.Parent do
                 i = i%#colors+1
                 TweenService:Create(frame,TweenInfo.new(0.35),{BackgroundColor3=colors[i]}):Play()
@@ -428,8 +410,12 @@ local function setupMainPanel()
         label.BackgroundTransparency = 1
         label.Text = "yip! Você achou o easter egg! Agora vai dormir :D"
         label.Font = Enum.Font.GothamBlack
-        label.TextSize = 19
+        label.TextSize = 20
         label.TextColor3 = Color3.fromRGB(255,255,255)
+        label.TextWrapped = true
+        label.TextScaled = true
+        label.TextStrokeTransparency = 0.7
+        TweenService:Create(label,TweenInfo.new(0.7),{TextTransparency=0}):Play()
         local close = Instance.new("TextButton", frame)
         close.Text = "✕"
         close.Font = Enum.Font.GothamBold
@@ -615,10 +601,6 @@ local function setupMainPanel()
             ESP_ENABLED = not ESP_ENABLED
             toggleBtn.Text = "ESP: " .. (ESP_ENABLED and "ON" or "OFF")
             toggleBtn.TextColor3 = ESP_ENABLED and ESP_COLOR or Color3.fromRGB(255,60,60)
-            if not ESP_ENABLED then
-                following = false
-                RunService:UnbindFromRenderStep("FollowTargetCam")
-            end
             updateAllESP()
         end)
 
@@ -711,27 +693,22 @@ local function setupMainPanel()
             updateAllESP()
         end)
 
-        -- Botão: seguir câmera do alvo
-        local cameraBtn = Instance.new("TextButton", espPanel)
-        cameraBtn.Text = "Seguir câmera"
-        cameraBtn.Size = UDim2.new(0.45,0,0,20)
-        cameraBtn.Position = UDim2.new(0.52,0,0,180)
-        cameraBtn.Font = Enum.Font.Gotham
-        cameraBtn.TextSize = 12
-        cameraBtn.BackgroundColor3 = Color3.fromRGB(30,44,60)
-        cameraBtn.TextColor3 = Color3.fromRGB(200,225,255)
-        cameraBtn.BorderSizePixel = 0
-        cameraBtn.MouseButton1Click:Connect(function()
-            if TARGET_PLAYER and TARGET_PLAYER.Character and TARGET_PLAYER.Character:FindFirstChild("HumanoidRootPart") then
-                following = not following
-                cameraBtn.TextColor3 = following and Color3.fromRGB(60,255,255) or Color3.fromRGB(200,225,255)
-                if following then
-                    followTargetCamera()
-                else
-                    Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                    RunService:UnbindFromRenderStep("FollowTargetCam")
-                end
-            end
+        -- Botão: "Faz nada" no lugar do seguir câmera
+        local fazNadaBtn = Instance.new("TextButton", espPanel)
+        fazNadaBtn.Text = "Faz nada"
+        fazNadaBtn.Size = UDim2.new(0.45,0,0,20)
+        fazNadaBtn.Position = UDim2.new(0.52,0,0,180)
+        fazNadaBtn.Font = Enum.Font.Gotham
+        fazNadaBtn.TextSize = 12
+        fazNadaBtn.BackgroundColor3 = Color3.fromRGB(30,44,60)
+        fazNadaBtn.TextColor3 = Color3.fromRGB(200,225,255)
+        fazNadaBtn.BorderSizePixel = 0
+        fazNadaBtn.MouseButton1Click:Connect(function()
+            StarterGui:SetCore("SendNotification",{
+                Title = "Faz nada...",
+                Text = "Não funcionou, então desisti '-'",
+                Duration = 2.3
+            })
         end)
 
         -- Painel de seleção de jogadores
@@ -819,7 +796,6 @@ local function setupMainPanel()
                 refreshPlayerList()
             end
         end)
-        -- Fechar ESP painel
         local closeBtn = Instance.new("TextButton", espPanel)
         closeBtn.Size = UDim2.new(0,26,0,26)
         closeBtn.Position = UDim2.new(1,-28,0,3)
@@ -832,11 +808,168 @@ local function setupMainPanel()
         closeBtn.MouseButton1Click:Connect(function() espPanel.Visible = false end)
     end
 
-    -- PAINEL JOGADOR (inalterado)
-    -- ... (igual ao anterior)
+    -- PAINEL JOGADOR
+    local function setupPlayerPanel()
+        if playerPanel and playerPanel.Parent then playerPanel.Visible = true return end
+        playerPanel = Instance.new("Frame", gui)
+        playerPanel.Name = "PlayerPanel"
+        playerPanel.Size = UDim2.new(0,230,0,210)
+        playerPanel.Position = UDim2.new(0.5,140,0.5,-105)
+        playerPanel.BackgroundColor3 = Color3.fromRGB(36,44,36)
+        playerPanel.BackgroundTransparency = 0.02
+        playerPanel.BorderSizePixel = 0
+        playerPanel.Visible = true
+        playerPanel.AnchorPoint = Vector2.new(0.5,0.5)
+        makeDraggable(playerPanel)
+        local title = Instance.new("TextLabel", playerPanel)
+        title.Size = UDim2.new(1,0,0,32)
+        title.Position = UDim2.new(0,0,0,0)
+        title.Text = "Painel Jogador"
+        title.Font = Enum.Font.GothamBlack
+        title.TextSize = 16
+        title.BackgroundTransparency = 1
+        title.TextColor3 = Color3.fromRGB(110,255,110)
+
+        -- Noclip
+        local noclipBtn = Instance.new("TextButton", playerPanel)
+        noclipBtn.Text = "Noclip: OFF"
+        noclipBtn.Size = UDim2.new(0.92,0,0,24)
+        noclipBtn.Position = UDim2.new(0.04,0,0,40)
+        noclipBtn.Font = Enum.Font.Gotham
+        noclipBtn.TextSize = 13
+        noclipBtn.BackgroundColor3 = Color3.fromRGB(50,70,50)
+        noclipBtn.TextColor3 = Color3.fromRGB(255,255,255)
+        noclipBtn.BorderSizePixel = 0
+        noclipBtn.MouseButton1Click:Connect(function()
+            noclipActive = not noclipActive
+            noclipBtn.Text = "Noclip: " .. (noclipActive and "ON" or "OFF")
+            noclipBtn.TextColor3 = noclipActive and Color3.fromRGB(100,255,100) or Color3.fromRGB(255,255,255)
+        end)
+
+        -- WalkSpeed
+        local wsLabel = Instance.new("TextLabel", playerPanel)
+        wsLabel.Text = "Velocidade:"
+        wsLabel.Size = UDim2.new(0.5,0,0,20)
+        wsLabel.Position = UDim2.new(0.04,0,0,72)
+        wsLabel.BackgroundTransparency = 1
+        wsLabel.TextColor3 = Color3.fromRGB(255,255,255)
+        wsLabel.Font = Enum.Font.Gotham
+        wsLabel.TextSize = 12
+        local wsBox = Instance.new("TextBox", playerPanel)
+        wsBox.Size = UDim2.new(0.35,0,0,20)
+        wsBox.Position = UDim2.new(0.56,0,0,72)
+        wsBox.Text = tostring(walkspeed)
+        wsBox.Font = Enum.Font.Gotham
+        wsBox.TextSize = 12
+        wsBox.BackgroundColor3 = Color3.fromRGB(50,70,50)
+        wsBox.TextColor3 = Color3.fromRGB(255,255,255)
+        wsBox.BorderSizePixel = 0
+        wsBox.ClearTextOnFocus = false
+        wsBox.FocusLost:Connect(function()
+            local val = tonumber(wsBox.Text)
+            if val and val >= 1 and val <= 100 then
+                walkspeed = val
+            else
+                wsBox.Text = tostring(walkspeed)
+            end
+        end)
+
+        -- JumpPower
+        local jpLabel = Instance.new("TextLabel", playerPanel)
+        jpLabel.Text = "Pulo:"
+        jpLabel.Size = UDim2.new(0.5,0,0,20)
+        jpLabel.Position = UDim2.new(0.04,0,0,104)
+        jpLabel.BackgroundTransparency = 1
+        jpLabel.TextColor3 = Color3.fromRGB(255,255,255)
+        jpLabel.Font = Enum.Font.Gotham
+        jpLabel.TextSize = 12
+        local jpBox = Instance.new("TextBox", playerPanel)
+        jpBox.Size = UDim2.new(0.35,0,0,20)
+        jpBox.Position = UDim2.new(0.56,0,0,104)
+        jpBox.Text = tostring(jumppower)
+        jpBox.Font = Enum.Font.Gotham
+        jpBox.TextSize = 12
+        jpBox.BackgroundColor3 = Color3.fromRGB(50,70,50)
+        jpBox.TextColor3 = Color3.fromRGB(255,255,255)
+        jpBox.BorderSizePixel = 0
+        jpBox.ClearTextOnFocus = false
+        jpBox.FocusLost:Connect(function()
+            local val = tonumber(jpBox.Text)
+            if val and val >= 1 and val <= 100 then
+                jumppower = val
+            else
+                jpBox.Text = tostring(jumppower)
+            end
+        end)
+
+        -- Botão padrão
+        local btnPadrao = Instance.new("TextButton", playerPanel)
+        btnPadrao.Text = "Colocar padrão"
+        btnPadrao.Size = UDim2.new(0.92,0,0,22)
+        btnPadrao.Position = UDim2.new(0.04,0,0,134)
+        btnPadrao.Font = Enum.Font.Gotham
+        btnPadrao.TextSize = 12
+        btnPadrao.BackgroundColor3 = Color3.fromRGB(32,64,32)
+        btnPadrao.TextColor3 = Color3.fromRGB(255,220,160)
+        btnPadrao.BorderSizePixel = 0
+        btnPadrao.MouseButton1Click:Connect(function()
+            walkspeed = DEFAULT_WALKSPEED
+            jumppower = DEFAULT_JUMPPOWER
+            wsBox.Text = tostring(walkspeed)
+            jpBox.Text = tostring(jumppower)
+        end)
+
+        -- Botão de câmera 1°/3° pessoa
+        local camToggleBtn = Instance.new("TextButton", playerPanel)
+        camToggleBtn.Text = "Câmera 1ª pessoa: OFF"
+        camToggleBtn.Size = UDim2.new(0.92,0,0,22)
+        camToggleBtn.Position = UDim2.new(0.04,0,0,162)
+        camToggleBtn.Font = Enum.Font.Gotham
+        camToggleBtn.TextSize = 12
+        camToggleBtn.BackgroundColor3 = Color3.fromRGB(32,32,64)
+        camToggleBtn.TextColor3 = Color3.fromRGB(160,220,255)
+        camToggleBtn.BorderSizePixel = 0
+        camToggleBtn.MouseButton1Click:Connect(function()
+            CAMERA_FIRST_PERSON = not CAMERA_FIRST_PERSON
+            CAMERA_LOCKED = false
+            camToggleBtn.Text = "Câmera 1ª pessoa: " .. (CAMERA_FIRST_PERSON and "ON" or "OFF")
+            camToggleBtn.TextColor3 = CAMERA_FIRST_PERSON and Color3.fromRGB(80,255,255) or Color3.fromRGB(160,220,255)
+            setCameraMode()
+        end)
+
+        -- Botão de câmera fixa
+        local camLockBtn = Instance.new("TextButton", playerPanel)
+        camLockBtn.Text = "Câmera fixa: OFF"
+        camLockBtn.Size = UDim2.new(0.92,0,0,22)
+        camLockBtn.Position = UDim2.new(0.04,0,0,188)
+        camLockBtn.Font = Enum.Font.Gotham
+        camLockBtn.TextSize = 12
+        camLockBtn.BackgroundColor3 = Color3.fromRGB(64,32,32)
+        camLockBtn.TextColor3 = Color3.fromRGB(255,200,200)
+        camLockBtn.BorderSizePixel = 0
+        camLockBtn.MouseButton1Click:Connect(function()
+            CAMERA_LOCKED = not CAMERA_LOCKED
+            CAMERA_FIRST_PERSON = false
+            camLockBtn.Text = "Câmera fixa: " .. (CAMERA_LOCKED and "ON" or "OFF")
+            camLockBtn.TextColor3 = CAMERA_LOCKED and Color3.fromRGB(255,160,160) or Color3.fromRGB(255,200,200)
+            setCameraMode()
+        end)
+
+        -- Fechar painel jogador
+        local closeBtn = Instance.new("TextButton", playerPanel)
+        closeBtn.Size = UDim2.new(0,26,0,26)
+        closeBtn.Position = UDim2.new(1,-28,0,3)
+        closeBtn.Text = "✕"
+        closeBtn.Font = Enum.Font.GothamBlack
+        closeBtn.TextSize = 14
+        closeBtn.BackgroundColor3 = Color3.fromRGB(32,32,32)
+        closeBtn.TextColor3 = Color3.fromRGB(255,90,90)
+        closeBtn.BorderSizePixel = 0
+        closeBtn.MouseButton1Click:Connect(function() playerPanel.Visible = false end)
+    end
 
     btnESP.MouseButton1Click:Connect(setupESPPanel)
-    -- btnPlayer.MouseButton1Click:Connect(setupPlayerPanel) -- (adicione o painel jogador igual ao seu script anterior)
+    btnPlayer.MouseButton1Click:Connect(setupPlayerPanel)
 
     -- Ícone de olho para abrir o menu principal
     local iconBtn = setupMenuIcon(function()
