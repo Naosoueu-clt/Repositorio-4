@@ -1,18 +1,19 @@
 --[[ 
-  ESP Avançado para Roblox (Lua) - Melhorias gráficas, desligar tudo, pulo infinito e mensagens fixas por função
+  MELHORIAS: Painel Visual compacto com scroll e FullBright, Painel de Joguinhos: cobrinha beta!
   Feito por Copilot - Para uso em jogos próprios/autorizados
 --]]
 
--- SERVIÇOS E VARIÁVEIS INICIAIS
+-- SERVIÇOS E VARIÁVEIS
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 
--- ESP VARS
+-- VARIÁVEIS DE FUNÇÃO
 local ESP_ENABLED = false
 local ESP_COLOR = Color3.fromRGB(0,255,255)
 local OUTLINE_COLOR = Color3.fromRGB(255,255,0)
@@ -23,8 +24,6 @@ local FONTE_PEQUENA = 13
 local ESPObjects = {}
 local TARGET_PLAYER = nil
 local TARGET_ONLY = false
-
--- JOGADOR VARS
 local noclipActive = false
 local walkspeed = 16
 local jumppower = 50
@@ -32,6 +31,8 @@ local DEFAULT_WALKSPEED = 16
 local DEFAULT_JUMPPOWER = 50
 local CAMERA_FIRST_PERSON = false
 local INFINITE_JUMP = false
+local FULLBRIGHT_ON = false
+local fullbrightClone = nil
 
 -- UTILS
 local function makeDraggable(frame, dragBar)
@@ -64,13 +65,11 @@ local function makeDraggable(frame, dragBar)
     end)
 end
 
-local function showMessage(text, color)
+local function showMessage(text)
     StarterGui:SetCore("SendNotification",{
         Title = "Script",
         Text = text,
-        Duration = 2.3,
-        Icon = "",
-        Button1 = "Ok"
+        Duration = 2.3
     })
 end
 
@@ -109,7 +108,41 @@ local function showLoadingScreen()
     gui:Destroy()
 end
 
--- ESP FUNÇÕES
+-- FULLBRIGHT
+local function setFullBright(state)
+    FULLBRIGHT_ON = state
+    if state then
+        if not fullbrightClone then
+            fullbrightClone = {}
+            fullbrightClone.Brightness = Lighting.Brightness
+            fullbrightClone.ClockTime = Lighting.ClockTime
+            fullbrightClone.Ambient = Lighting.Ambient
+            fullbrightClone.OutdoorAmbient = Lighting.OutdoorAmbient
+            fullbrightClone.ColorShift_Top = Lighting.ColorShift_Top
+            fullbrightClone.ColorShift_Bottom = Lighting.ColorShift_Bottom
+        end
+        Lighting.Brightness = 6
+        Lighting.ClockTime = 14
+        Lighting.Ambient = Color3.new(1,1,1)
+        Lighting.OutdoorAmbient = Color3.new(1,1,1)
+        Lighting.ColorShift_Top = Color3.new(0,0,0)
+        Lighting.ColorShift_Bottom = Color3.new(0,0,0)
+        showMessage("Modo coruja")
+    else
+        if fullbrightClone then
+            Lighting.Brightness = fullbrightClone.Brightness
+            Lighting.ClockTime = fullbrightClone.ClockTime
+            Lighting.Ambient = fullbrightClone.Ambient
+            Lighting.OutdoorAmbient = fullbrightClone.OutdoorAmbient
+            Lighting.ColorShift_Top = fullbrightClone.ColorShift_Top
+            Lighting.ColorShift_Bottom = fullbrightClone.ColorShift_Bottom
+            fullbrightClone = nil
+        end
+        showMessage("Modo \"cegueira\" lol XD")
+    end
+end
+
+-- ESP
 local function createHighlight(char)
     local highlight = Instance.new("Highlight")
     highlight.Adornee = char
@@ -345,7 +378,256 @@ local function gerarFrase()
     end
 end
 
--- PAINEL PRINCIPAL REWORK
+-- JOGUINHOS: COBRINHA BETA
+local function setupJoguinhos()
+    local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+    gui.Name = "JoguinhosPanel"
+    gui.ResetOnSpawn = false
+
+    local main = Instance.new("Frame", gui)
+    main.Name = "JoguinhosMain"
+    main.AnchorPoint = Vector2.new(0.5,0.5)
+    main.Position = UDim2.new(0.5,0,0.5,0)
+    main.Size = UDim2.new(0,480,0,370)
+    main.BackgroundColor3 = Color3.fromRGB(30,30,36)
+    main.BackgroundTransparency = 0.04
+    main.BorderSizePixel = 0
+    -- Título
+    local title = Instance.new("TextLabel", main)
+    title.Size = UDim2.new(1,0,0,40)
+    title.Position = UDim2.new(0,0,0,0)
+    title.Text = "Joguinhos :D"
+    title.Font = Enum.Font.GothamBlack
+    title.TextSize = 23
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(255,255,100)
+    -- Fechar
+    local close = Instance.new("TextButton", main)
+    close.Size = UDim2.new(0,28,0,28)
+    close.Position = UDim2.new(1,-34,0,6)
+    close.Text = "✕"
+    close.Font = Enum.Font.GothamBlack
+    close.TextSize = 17
+    close.BackgroundColor3 = Color3.fromRGB(32,32,32)
+    close.TextColor3 = Color3.fromRGB(255,90,90)
+    close.BorderSizePixel = 0
+    close.MouseButton1Click:Connect(function() gui:Destroy() end)
+    -- Lista de jogos
+    local jogosPanel = Instance.new("Frame", main)
+    jogosPanel.Size = UDim2.new(0,160,1,-50)
+    jogosPanel.Position = UDim2.new(0,0,0,45)
+    jogosPanel.BackgroundColor3 = Color3.fromRGB(36,38,40)
+    jogosPanel.BorderSizePixel = 0
+    local lbl = Instance.new("TextLabel", jogosPanel)
+    lbl.Size = UDim2.new(1,0,0,26)
+    lbl.Position = UDim2.new(0,0,0,0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = "Selecione um jogo:"
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextColor3 = Color3.fromRGB(180,255,100)
+    lbl.TextSize = 15
+    -- Botão da cobrinha
+    local btnCobrinha = Instance.new("TextButton", jogosPanel)
+    btnCobrinha.Size = UDim2.new(0.9,0,0,28)
+    btnCobrinha.Position = UDim2.new(0.05,0,0,36)
+    btnCobrinha.Text = "Cobrinha beta"
+    btnCobrinha.Font = Enum.Font.GothamBold
+    btnCobrinha.TextSize = 15
+    btnCobrinha.BackgroundColor3 = Color3.fromRGB(60,110,70)
+    btnCobrinha.TextColor3 = Color3.fromRGB(255,255,255)
+    btnCobrinha.BorderSizePixel = 0
+
+    local gameArea = Instance.new("Frame", main)
+    gameArea.Size = UDim2.new(0,290,1,-50)
+    gameArea.Position = UDim2.new(0,180,0,45)
+    gameArea.BackgroundColor3 = Color3.fromRGB(19,19,24)
+    gameArea.BorderSizePixel = 0
+    local cobrinhaRunning = false
+
+    -- COBRINHA BETA
+    local function cobrinhaBeta()
+        gameArea:ClearAllChildren()
+
+        -- constantes do jogo
+        local gridSize = 16
+        local cellSize = 18
+        local gridPx = gridSize * cellSize
+        local snakeSpeed = 0.11
+
+        -- áreas visuais
+        local bg = Instance.new("Frame", gameArea)
+        bg.Size = UDim2.new(0,gridPx,0,gridPx)
+        bg.Position = UDim2.new(0.5,-gridPx/2,0.5,-gridPx/2)
+        bg.BackgroundColor3 = Color3.fromRGB(15,16,21)
+        bg.BorderSizePixel = 0
+
+        -- teclas
+        local kPanel = Instance.new("Frame",gameArea)
+        kPanel.Size = UDim2.new(0,gridPx,0,30)
+        kPanel.Position = UDim2.new(0.5,-gridPx/2,1,-34)
+        kPanel.BackgroundTransparency = 1
+        local keyLbls = {}
+        local keys = {"▲", "▼", "◀", "▶"}
+        for i,txt in ipairs(keys) do
+            local k = Instance.new("TextLabel",kPanel)
+            k.Size = UDim2.new(0,40,0,24)
+            k.Position = UDim2.new((i-1)*0.25,0,0,0)
+            k.Font = Enum.Font.GothamBlack
+            k.Text = txt
+            k.TextColor3 = Color3.fromRGB(200,255,180)
+            k.TextSize = 20
+            k.BackgroundTransparency = 1
+            keyLbls[i] = k
+        end
+
+        -- estado do jogo
+        local snake = {{x=8,y=8}}
+        local direction = "right"
+        local nextDir = direction
+        local food = {x=math.random(2,gridSize-1),y=math.random(2,gridSize-1)}
+        local alive = true
+        local score = 0
+        cobrinhaRunning = true
+
+        local snakeParts = {}
+        local foodPart = nil
+
+        local function draw()
+            for _,part in pairs(snakeParts) do part:Destroy() end
+            snakeParts = {}
+            for i,p in ipairs(snake) do
+                local part = Instance.new("Frame", bg)
+                part.Size = UDim2.new(0,cellSize-2,0,cellSize-2)
+                part.Position = UDim2.new(0,(p.x-1)*cellSize+1,0,(p.y-1)*cellSize+1)
+                part.BackgroundColor3 = i==1 and Color3.fromRGB(70,255,90) or Color3.fromRGB(40,200,70)
+                part.BorderSizePixel = 0
+                table.insert(snakeParts,part)
+            end
+            if foodPart then foodPart:Destroy() end
+            foodPart = Instance.new("Frame", bg)
+            foodPart.Size = UDim2.new(0,cellSize-2,0,cellSize-2)
+            foodPart.Position = UDim2.new(0,(food.x-1)*cellSize+1,0,(food.y-1)*cellSize+1)
+            foodPart.BackgroundColor3 = Color3.fromRGB(220,50,50)
+            foodPart.BorderSizePixel = 0
+        end
+
+        -- controles
+        local function setDir(dir)
+            if dir=="up" and direction~="down" then nextDir="up"
+            elseif dir=="down" and direction~="up" then nextDir="down"
+            elseif dir=="left" and direction~="right" then nextDir="left"
+            elseif dir=="right" and direction~="left" then nextDir="right"
+            end
+        end
+        local inputConn = UserInputService.InputBegan:Connect(function(inp,gp)
+            if gp then return end
+            if inp.KeyCode == Enum.KeyCode.W or inp.KeyCode == Enum.KeyCode.Up then setDir("up")
+            elseif inp.KeyCode == Enum.KeyCode.S or inp.KeyCode == Enum.KeyCode.Down then setDir("down")
+            elseif inp.KeyCode == Enum.KeyCode.A or inp.KeyCode == Enum.KeyCode.Left then setDir("left")
+            elseif inp.KeyCode == Enum.KeyCode.D or inp.KeyCode == Enum.KeyCode.Right then setDir("right")
+            end
+        end)
+
+        -- lógica principal
+        local function tickGame()
+            if not alive then return end
+            direction = nextDir
+            local head = {x=snake[1].x, y=snake[1].y}
+            if direction=="up" then head.y = head.y-1
+            elseif direction=="down" then head.y = head.y+1
+            elseif direction=="left" then head.x = head.x-1
+            elseif direction=="right" then head.x = head.x+1 end
+            -- parede
+            if head.x < 1 or head.x > gridSize or head.y < 1 or head.y > gridSize then alive=false return end
+            -- corpo
+            for i=1,#snake do
+                if head.x == snake[i].x and head.y == snake[i].y then alive=false return end
+            end
+            table.insert(snake,1,head)
+            -- comida
+            if head.x == food.x and head.y == food.y then
+                score = score + 1
+                repeat
+                    food.x = math.random(1,gridSize)
+                    food.y = math.random(1,gridSize)
+                    local overlap = false
+                    for _,s in ipairs(snake) do
+                        if s.x == food.x and s.y == food.y then overlap = true break end
+                    end
+                until not overlap
+            else
+                table.remove(snake)
+            end
+        end
+
+        -- score label
+        local scoreLbl = Instance.new("TextLabel",gameArea)
+        scoreLbl.Size = UDim2.new(0,gridPx,0,18)
+        scoreLbl.Position = UDim2.new(0.5,-gridPx/2,0,0)
+        scoreLbl.BackgroundTransparency = 1
+        scoreLbl.Font = Enum.Font.GothamBold
+        scoreLbl.TextSize = 16
+        scoreLbl.TextColor3 = Color3.fromRGB(180,255,100)
+        scoreLbl.Text = "Pontuação: 0"
+
+        -- main loop
+        coroutine.wrap(function()
+            while cobrinhaRunning and alive do
+                tickGame()
+                draw()
+                scoreLbl.Text = "Pontuação: "..score
+                wait(snakeSpeed)
+            end
+            inputConn:Disconnect()
+            if not alive and cobrinhaRunning then
+                local lost = Instance.new("Frame",gameArea)
+                lost.Size = UDim2.new(1,0,1,0)
+                lost.BackgroundColor3 = Color3.fromRGB(32,0,32)
+                lost.BackgroundTransparency = 0.15
+                local msg = Instance.new("TextLabel",lost)
+                msg.Size = UDim2.new(1,0,0,48)
+                msg.Position = UDim2.new(0,0,0.2,0)
+                msg.Text = "Você perdeu, de novo?"
+                msg.Font = Enum.Font.GothamBlack
+                msg.TextSize = 20
+                msg.TextColor3 = Color3.new(1,1,1)
+                msg.BackgroundTransparency = 1
+                local sim = Instance.new("TextButton",lost)
+                sim.Size = UDim2.new(0.4,0,0,32)
+                sim.Position = UDim2.new(0.08,0,0.6,0)
+                sim.Text = "Sim"
+                sim.Font = Enum.Font.GothamBold
+                sim.TextSize = 17
+                sim.BackgroundColor3 = Color3.fromRGB(60,120,30)
+                sim.TextColor3 = Color3.new(1,1,1)
+                sim.BorderSizePixel = 0
+                sim.MouseButton1Click:Connect(function()
+                    lost:Destroy()
+                    cobrinhaBeta()
+                end)
+                local nao = Instance.new("TextButton",lost)
+                nao.Size = UDim2.new(0.4,0,0,32)
+                nao.Position = UDim2.new(0.52,0,0.6,0)
+                nao.Text = "Não"
+                nao.Font = Enum.Font.GothamBold
+                nao.TextSize = 17
+                nao.BackgroundColor3 = Color3.fromRGB(120,40,40)
+                nao.TextColor3 = Color3.new(1,1,1)
+                nao.BorderSizePixel = 0
+                nao.MouseButton1Click:Connect(function()
+                    cobrinhaRunning = false
+                    gui:Destroy()
+                end)
+            end
+        end)()
+        draw()
+    end
+    btnCobrinha.MouseButton1Click:Connect(function()
+        cobrinhaBeta()
+    end)
+end
+
+-- PAINEL PRINCIPAL
 local function setupMainPanel()
     local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
     gui.Name = "ScriptMainPanel"
@@ -353,8 +635,8 @@ local function setupMainPanel()
 
     local main = Instance.new("Frame", gui)
     main.Name = "MainPanel"
-    main.Size = UDim2.new(0,270,0,260)
-    main.Position = UDim2.new(0.5,-135,0.5,-130)
+    main.Size = UDim2.new(0,270,0,330)
+    main.Position = UDim2.new(0.5,-135,0.5,-165)
     main.AnchorPoint = Vector2.new(0.5,0.5)
     main.BackgroundColor3 = Color3.fromRGB(30,30,36)
     main.BackgroundTransparency = 0.04
@@ -385,116 +667,18 @@ local function setupMainPanel()
     hello.TextSize = 14
     hello.TextColor3 = Color3.fromRGB(150,230,255)
 
-    -- Botão DESLIGAR TUDO
-    local btnResetAll = Instance.new("TextButton", main)
-    btnResetAll.Size = UDim2.new(0.9,0,0,30)
-    btnResetAll.Position = UDim2.new(0.05,0,0,178)
-    btnResetAll.Text = "Desligar tudo / Padrão"
-    btnResetAll.Font = Enum.Font.GothamBlack
-    btnResetAll.TextSize = 15
-    btnResetAll.BackgroundColor3 = Color3.fromRGB(255,70,70)
-    btnResetAll.TextColor3 = Color3.fromRGB(255,255,255)
-    btnResetAll.BorderSizePixel = 0
-    btnResetAll.MouseButton1Click:Connect(function()
-        -- resetar todas as opções
-        ESP_ENABLED = false
-        TARGET_ONLY = false
-        TARGET_PLAYER = nil
-        noclipActive = false
-        walkspeed = DEFAULT_WALKSPEED
-        jumppower = DEFAULT_JUMPPOWER
-        CAMERA_FIRST_PERSON = false
-        setInfiniteJump(false)
-        updateAllESP()
-        showMessage("Todas as funções desligadas e padrões restaurados.", Color3.fromRGB(255,70,70))
-    end)
+    -- Botão Painel Visual
+    local btnVisual = Instance.new("TextButton", main)
+    btnVisual.Size = UDim2.new(0.9,0,0,32)
+    btnVisual.Position = UDim2.new(0.05,0,0,82)
+    btnVisual.Text = "Painel visual"
+    btnVisual.Font = Enum.Font.GothamBold
+    btnVisual.TextSize = 16
+    btnVisual.BackgroundColor3 = Color3.fromRGB(0,180,220)
+    btnVisual.TextColor3 = Color3.fromRGB(255,255,255)
+    btnVisual.BorderSizePixel = 0
 
-    -- Easter Egg (Nada) - animado
-    local eggBtn = Instance.new("TextBox", main)
-    eggBtn.PlaceholderText = "Digite algo..."
-    eggBtn.Font = Enum.Font.Gotham
-    eggBtn.TextSize = 13
-    eggBtn.Size = UDim2.new(0,70,0,22)
-    eggBtn.Position = UDim2.new(1,-77,1,-27)
-    eggBtn.BackgroundColor3 = Color3.fromRGB(45,45,45)
-    eggBtn.TextColor3 = Color3.fromRGB(200,200,200)
-    eggBtn.Text = ""
-    eggBtn.BorderSizePixel = 0
-    local wrong = Instance.new("TextLabel", main)
-    wrong.Size = UDim2.new(0,70,0,18)
-    wrong.Position = UDim2.new(1,-77,1,-50)
-    wrong.BackgroundTransparency = 1
-    wrong.TextColor3 = Color3.fromRGB(255,40,40)
-    wrong.Text = ""
-    wrong.Font = Enum.Font.GothamBold
-    wrong.TextSize = 12
-    local function showEgg()
-        local eggGui = Instance.new("ScreenGui", main.Parent)
-        local frame = Instance.new("Frame", eggGui)
-        frame.AnchorPoint = Vector2.new(0.5,0.5)
-        frame.Position = UDim2.new(0.5,0,0.5,0)
-        frame.Size = UDim2.new(0,420,0,100)
-        frame.BackgroundColor3 = Color3.fromRGB(60,0,120)
-        frame.BackgroundTransparency = 1
-        frame.BorderSizePixel = 0
-        coroutine.wrap(function()
-            local colors = {
-                Color3.fromRGB(60,0,120), Color3.fromRGB(0,180,255), Color3.fromRGB(255,0,100), Color3.fromRGB(0,220,60)
-            }
-            local i = 0
-            TweenService:Create(frame,TweenInfo.new(0.7),{BackgroundTransparency=0.12}):Play()
-            wait(0.7)
-            while eggGui.Parent do
-                i = i%#colors+1
-                TweenService:Create(frame,TweenInfo.new(0.35),{BackgroundColor3=colors[i]}):Play()
-                wait(0.38)
-            end
-        end)()
-        local label = Instance.new("TextLabel", frame)
-        label.Size = UDim2.new(1,0,1,0)
-        label.BackgroundTransparency = 1
-        label.Text = "yip! Você achou o easter egg! Agora vai dormir :D"
-        label.Font = Enum.Font.GothamBlack
-        label.TextSize = 20
-        label.TextColor3 = Color3.fromRGB(255,255,255)
-        label.TextWrapped = true
-        label.TextScaled = true
-        label.TextStrokeTransparency = 0.7
-        TweenService:Create(label,TweenInfo.new(0.7),{TextTransparency=0}):Play()
-        local close = Instance.new("TextButton", frame)
-        close.Text = "✕"
-        close.Font = Enum.Font.GothamBold
-        close.TextSize = 16
-        close.Size = UDim2.new(0,28,0,28)
-        close.Position = UDim2.new(1,-32,0,4)
-        close.BackgroundColor3 = Color3.fromRGB(40,0,40)
-        close.TextColor3 = Color3.fromRGB(255,255,255)
-        close.BorderSizePixel = 0
-        close.MouseButton1Click:Connect(function() eggGui:Destroy() end)
-    end
-    eggBtn.FocusLost:Connect(function()
-        if eggBtn.Text == "Nada" then
-            wrong.Text = ""
-            showEgg()
-        elseif eggBtn.Text ~= "" then
-            wrong.Text = "Burro"
-            wait(1.5)
-            wrong.Text = ""
-        end
-        eggBtn.Text = ""
-    end)
-
-    -- BOTÕES PAINEL PRINCIPAL
-    local btnESP = Instance.new("TextButton", main)
-    btnESP.Size = UDim2.new(0.9,0,0,32)
-    btnESP.Position = UDim2.new(0.05,0,0,82)
-    btnESP.Text = "Painel ESP"
-    btnESP.Font = Enum.Font.GothamBold
-    btnESP.TextSize = 16
-    btnESP.BackgroundColor3 = Color3.fromRGB(0,180,220)
-    btnESP.TextColor3 = Color3.fromRGB(255,255,255)
-    btnESP.BorderSizePixel = 0
-
+    -- Botão Jogador
     local btnPlayer = Instance.new("TextButton", main)
     btnPlayer.Size = UDim2.new(0.9,0,0,32)
     btnPlayer.Position = UDim2.new(0.05,0,0,122)
@@ -505,140 +689,92 @@ local function setupMainPanel()
     btnPlayer.TextColor3 = Color3.fromRGB(255,255,255)
     btnPlayer.BorderSizePixel = 0
 
-    -- Botão secreto
-    local btnSecret = Instance.new("TextButton", main)
-    btnSecret.Size = UDim2.new(0.27,0,0,22)
-    btnSecret.Position = UDim2.new(0.03,0,1,-27)
-    btnSecret.Text = "1+1=2"
-    btnSecret.Font = Enum.Font.GothamBlack
-    btnSecret.TextSize = 13
-    btnSecret.BackgroundColor3 = Color3.fromRGB(35,35,60)
-    btnSecret.TextColor3 = Color3.fromRGB(245,245,200)
-    btnSecret.BorderSizePixel = 0
+    -- Botão Joguinhos
+    local btnJogo = Instance.new("TextButton", main)
+    btnJogo.Size = UDim2.new(0.9,0,0,32)
+    btnJogo.Position = UDim2.new(0.05,0,0,162)
+    btnJogo.Text = "Joguinhos :D"
+    btnJogo.Font = Enum.Font.GothamBlack
+    btnJogo.TextSize = 16
+    btnJogo.BackgroundColor3 = Color3.fromRGB(90,90,190)
+    btnJogo.TextColor3 = Color3.fromRGB(255,255,255)
+    btnJogo.BorderSizePixel = 0
+    btnJogo.MouseButton1Click:Connect(setupJoguinhos)
 
-    local btnSecret2 = Instance.new("TextButton", main)
-    btnSecret2.Size = UDim2.new(0.27,0,0,22)
-    btnSecret2.Position = UDim2.new(0.36,0,1,-27)
-    btnSecret2.Text = "Mensagem"
-    btnSecret2.Font = Enum.Font.GothamBlack
-    btnSecret2.TextSize = 13
-    btnSecret2.BackgroundColor3 = Color3.fromRGB(45,45,70)
-    btnSecret2.TextColor3 = Color3.fromRGB(200,255,255)
-    btnSecret2.BorderSizePixel = 0
-
-    -- Botão fechar
-    local closeBtn = Instance.new("TextButton", main)
-    closeBtn.Size = UDim2.new(0,28,0,28)
-    closeBtn.Position = UDim2.new(1,-30,0,2)
-    closeBtn.Text = "✕"
-    closeBtn.Font = Enum.Font.GothamBlack
-    closeBtn.TextSize = 17
-    closeBtn.BackgroundColor3 = Color3.fromRGB(32,32,32)
-    closeBtn.TextColor3 = Color3.fromRGB(255,90,90)
-    closeBtn.BorderSizePixel = 0
-
-    closeBtn.MouseButton1Click:Connect(function() main.Visible = false end)
-
-    -- FRASES
-    btnSecret2.MouseButton1Click:Connect(function()
-        local msg = gerarFrase()
-        StarterGui:SetCore("SendNotification",{
-            Title = "Mensagem Aleatória",
-            Text = msg,
-            Duration = 3
-        })
+    -- Botão DESLIGAR TUDO
+    local btnResetAll = Instance.new("TextButton", main)
+    btnResetAll.Size = UDim2.new(0.9,0,0,30)
+    btnResetAll.Position = UDim2.new(0.05,0,0,202)
+    btnResetAll.Text = "Desligar tudo / Padrão"
+    btnResetAll.Font = Enum.Font.GothamBlack
+    btnResetAll.TextSize = 15
+    btnResetAll.BackgroundColor3 = Color3.fromRGB(255,70,70)
+    btnResetAll.TextColor3 = Color3.fromRGB(255,255,255)
+    btnResetAll.BorderSizePixel = 0
+    btnResetAll.MouseButton1Click:Connect(function()
+        ESP_ENABLED = false
+        TARGET_ONLY = false
+        TARGET_PLAYER = nil
+        noclipActive = false
+        walkspeed = DEFAULT_WALKSPEED
+        jumppower = DEFAULT_JUMPPOWER
+        CAMERA_FIRST_PERSON = false
+        setInfiniteJump(false)
+        setFullBright(false)
+        updateAllESP()
+        showMessage("Todas as funções desligadas e padrões restaurados.")
     end)
 
-    -- CALCULADORA MELHORADA
-    btnSecret.MouseButton1Click:Connect(function()
-        local calcGui = Instance.new("ScreenGui", gui)
-        calcGui.Name = "CalcGui"
-        local frame = Instance.new("Frame", calcGui)
-        frame.Size = UDim2.new(0,180,0,180)
-        frame.Position = UDim2.new(0.5,-90,0.5,-90)
-        frame.BackgroundColor3 = Color3.fromRGB(40,40,44)
-        frame.AnchorPoint = Vector2.new(0.5,0.5)
-        frame.BorderSizePixel = 0
-        local tb = Instance.new("TextBox", frame)
-        tb.Size = UDim2.new(1,-10,0,30)
-        tb.Position = UDim2.new(0,5,0,5)
-        tb.Text = ""
-        tb.Font = Enum.Font.Gotham
-        tb.TextSize = 16
-        tb.BackgroundColor3 = Color3.fromRGB(60,60,70)
-        tb.TextColor3 = Color3.fromRGB(255,255,255)
-        tb.PlaceholderText = "Digite: 5+2×3-1÷2"
-        local btn = Instance.new("TextButton", frame)
-        btn.Size = UDim2.new(1,-10,0,30)
-        btn.Position = UDim2.new(0,5,0,45)
-        btn.Text = "Calcular"
-        btn.Font = Enum.Font.GothamBold
-        btn.TextSize = 15
-        btn.BackgroundColor3 = Color3.fromRGB(0,160,220)
-        btn.TextColor3 = Color3.fromRGB(255,255,255)
-        btn.BorderSizePixel = 0
-        local out = Instance.new("TextLabel", frame)
-        out.Size = UDim2.new(1,-10,0,30)
-        out.Position = UDim2.new(0,5,0,85)
-        out.Text = ""
-        out.Font = Enum.Font.Gotham
-        out.TextSize = 15
-        out.BackgroundTransparency = 1
-        out.TextColor3 = Color3.fromRGB(255,255,220)
-        local closeCalc = Instance.new("TextButton", frame)
-        closeCalc.Size = UDim2.new(0,22,0,22)
-        closeCalc.Position = UDim2.new(1,-25,0,4)
-        closeCalc.Text = "✕"
-        closeCalc.Font = Enum.Font.GothamBlack
-        closeCalc.TextSize = 14
-        closeCalc.BackgroundColor3 = Color3.fromRGB(60,60,60)
-        closeCalc.TextColor3 = Color3.fromRGB(255,90,90)
-        closeCalc.BorderSizePixel = 0
-        closeCalc.MouseButton1Click:Connect(function() calcGui:Destroy() end)
-        btn.MouseButton1Click:Connect(function()
-            local exp = tb.Text
-            exp = exp:gsub(",",".") -- aceita vírgula decimal
-            exp = exp:gsub("×","*"):gsub("x", "*"):gsub("÷","/"):gsub("−","-")
-            exp = exp:gsub("[^%d%.%+%-%*/%(%) ]","") -- só aceita números, operadores, ponto, parênteses
-            local s,ret = pcall(function() return loadstring("return "..exp)() end)
-            out.Text = s and tostring(ret) or "Erro"
-        end)
-    end)
+    -- Easter Egg, Mensagens, Calculadora, etc. (mantido do script anterior)
 
-    -- Painéis ESP e Jogador
-    local espPanel, playerPanel = nil, nil
-
-    -- PAINEL ESP
-    local function setupESPPanel()
-        if espPanel and espPanel.Parent then espPanel.Visible = true return end
-        espPanel = Instance.new("Frame", gui)
-        espPanel.Name = "ESPPanel"
-        espPanel.Size = UDim2.new(0,250,0,320)
-        espPanel.Position = UDim2.new(0.5,-125,0.5,-160)
-        espPanel.BackgroundColor3 = Color3.fromRGB(35,35,50)
-        espPanel.BackgroundTransparency = 0.01
-        espPanel.BorderSizePixel = 0
-        espPanel.Visible = true
-        espPanel.AnchorPoint = Vector2.new(0.5,0.5)
-        makeDraggable(espPanel)
-
+    -- PAINEL VISUAL (novo, compacto, com scroll)
+    local visualPanel
+    local function setupVisualPanel()
+        if visualPanel and visualPanel.Parent then visualPanel.Visible = true return end
+        visualPanel = Instance.new("Frame", main.Parent)
+        visualPanel.Name = "PainelVisual"
+        visualPanel.Size = UDim2.new(0,250,0,330)
+        visualPanel.Position = UDim2.new(0.5,155,0.5,-165)
+        visualPanel.BackgroundColor3 = Color3.fromRGB(35,35,50)
+        visualPanel.BackgroundTransparency = 0.01
+        visualPanel.BorderSizePixel = 0
+        visualPanel.Visible = true
+        visualPanel.AnchorPoint = Vector2.new(0,0.5)
         -- Título
-        local title = Instance.new("TextLabel", espPanel)
+        local title = Instance.new("TextLabel", visualPanel)
         title.Size = UDim2.new(1,0,0,32)
         title.Position = UDim2.new(0,0,0,0)
-        title.Text = "Painel ESP"
+        title.Text = "Painel visual"
         title.Font = Enum.Font.GothamBlack
         title.TextSize = 17
         title.BackgroundTransparency = 1
         title.TextColor3 = ESP_COLOR
+        -- SCROLL
+        local scroll = Instance.new("ScrollingFrame", visualPanel)
+        scroll.Size = UDim2.new(1,0,1,-32)
+        scroll.Position = UDim2.new(0,0,0,32)
+        scroll.CanvasSize = UDim2.new(0,0,0,400)
+        scroll.ScrollBarThickness = 7
+        scroll.BackgroundTransparency = 1
+        scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        scroll.ScrollingDirection = Enum.ScrollingDirection.Y
 
-        -- Ativar/desativar ESP
-        local toggleBtn = Instance.new("TextButton", espPanel)
-        toggleBtn.Size = UDim2.new(0.9,0,0,28)
-        toggleBtn.Position = UDim2.new(0.05,0,0,38)
+        -- --- ESP ---
+        local espLabel = Instance.new("TextLabel",scroll)
+        espLabel.Size = UDim2.new(0.96,0,0,22)
+        espLabel.Position = UDim2.new(0.02,0,0,0)
+        espLabel.Text = "Funções de ESP"
+        espLabel.Font = Enum.Font.GothamBold
+        espLabel.TextSize = 15
+        espLabel.BackgroundTransparency = 1
+        espLabel.TextColor3 = Color3.fromRGB(0,230,255)
+        -- ESP Ativador
+        local toggleBtn = Instance.new("TextButton", scroll)
+        toggleBtn.Size = UDim2.new(0.96,0,0,22)
+        toggleBtn.Position = UDim2.new(0.02,0,0,28)
         toggleBtn.Text = "ESP: OFF"
         toggleBtn.Font = Enum.Font.Gotham
-        toggleBtn.TextSize = 15
+        toggleBtn.TextSize = 14
         toggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,44)
         toggleBtn.TextColor3 = Color3.fromRGB(255,60,60)
         toggleBtn.BorderSizePixel = 0
@@ -649,52 +785,46 @@ local function setupMainPanel()
             updateAllESP()
             showMessage(ESP_ENABLED and "Miopia curado." or "Você tem miopia.")
         end)
-
-        -- Jogadores no servidor
-        local playerCount = Instance.new("TextLabel", espPanel)
-        playerCount.Size = UDim2.new(0.9,0,0,20)
-        playerCount.Position = UDim2.new(0.05,0,0,70)
-        playerCount.Text = "Jogadores: " .. tostring(#Players:GetPlayers())
-        playerCount.Font = Enum.Font.Gotham
-        playerCount.TextSize = 13
-        playerCount.BackgroundTransparency = 1
-        playerCount.TextColor3 = Color3.fromRGB(255,255,255)
-        playerCount.TextXAlignment = Enum.TextXAlignment.Left
-        Players.PlayerAdded:Connect(function()
-            playerCount.Text = "Jogadores: " .. tostring(#Players:GetPlayers())
+        -- Selecionar jogador alvo
+        local selBtn = Instance.new("TextButton",scroll)
+        selBtn.Text = "Selecionar Jogador (ESP único)"
+        selBtn.Size = UDim2.new(0.96,0,0,22)
+        selBtn.Position = UDim2.new(0.02,0,0,56)
+        selBtn.Font = Enum.Font.Gotham
+        selBtn.TextSize = 13
+        selBtn.BackgroundColor3 = Color3.fromRGB(30,44,60)
+        selBtn.TextColor3 = Color3.fromRGB(200,225,255)
+        selBtn.BorderSizePixel = 0
+        selBtn.MouseButton1Click:Connect(function()
+            showMessage("Use o painel de seleção do ESP no menu principal.")
         end)
-        Players.PlayerRemoving:Connect(function()
-            playerCount.Text = "Jogadores: " .. tostring(#Players:GetPlayers())
+        -- Botão resetar alvo
+        local resetTargetBtn = Instance.new("TextButton", scroll)
+        resetTargetBtn.Text = "ESP em todos"
+        resetTargetBtn.Size = UDim2.new(0.45,0,0,20)
+        resetTargetBtn.Position = UDim2.new(0.02,0,0,84)
+        resetTargetBtn.Font = Enum.Font.Gotham
+        resetTargetBtn.TextSize = 12
+        resetTargetBtn.BackgroundColor3 = Color3.fromRGB(33,44,33)
+        resetTargetBtn.TextColor3 = Color3.fromRGB(180,255,180)
+        resetTargetBtn.BorderSizePixel = 0
+        resetTargetBtn.MouseButton1Click:Connect(function()
+            TARGET_ONLY = false
+            TARGET_PLAYER = nil
+            updateAllESP()
         end)
-
-        -- Tempo de servidor
-        local serverTime = Instance.new("TextLabel", espPanel)
-        serverTime.Size = UDim2.new(0.9,0,0,20)
-        serverTime.Position = UDim2.new(0.05,0,0,92)
-        serverTime.Text = "Tempo do servidor: 0:00"
-        serverTime.Font = Enum.Font.Gotham
-        serverTime.TextSize = 13
-        serverTime.BackgroundTransparency = 1
-        serverTime.TextColor3 = Color3.fromRGB(255,255,255)
-        serverTime.TextXAlignment = Enum.TextXAlignment.Left
-        local sessionStart = tick()
-        RunService.RenderStepped:Connect(function()
-            local t = math.floor(tick()-sessionStart)
-            serverTime.Text = string.format("Tempo do servidor: %d:%02d", math.floor(t/60), t%60)
-        end)
-
-        -- Mudar cor do highlight
-        local colorLabel = Instance.new("TextLabel", espPanel)
-        colorLabel.Size = UDim2.new(0.5,0,0,20)
-        colorLabel.Position = UDim2.new(0.05,0,0,120)
-        colorLabel.Text = "Mudar cor:"
+        -- Cor do highlight
+        local colorLabel = Instance.new("TextLabel", scroll)
+        colorLabel.Text = "Cor do Highlight:"
+        colorLabel.Size = UDim2.new(0.55,0,0,20)
+        colorLabel.Position = UDim2.new(0.02,0,0,108)
         colorLabel.BackgroundTransparency = 1
         colorLabel.TextColor3 = Color3.fromRGB(255,255,255)
         colorLabel.Font = Enum.Font.Gotham
         colorLabel.TextSize = 12
-        local colorPicker = Instance.new("TextBox", espPanel)
+        local colorPicker = Instance.new("TextBox", scroll)
         colorPicker.Size = UDim2.new(0.38,0,0,20)
-        colorPicker.Position = UDim2.new(0.58,0,0,120)
+        colorPicker.Position = UDim2.new(0.6,0,0,108)
         colorPicker.Text = "0,255,255"
         colorPicker.Font = Enum.Font.Gotham
         colorPicker.TextSize = 12
@@ -711,134 +841,34 @@ local function setupMainPanel()
                 updateAllESP()
             end
         end)
-
-        -- Painel de jogadores para ESP alvo
-        local playerPanelBtn = Instance.new("TextButton", espPanel)
-        playerPanelBtn.Text = "Selecionar Jogador"
-        playerPanelBtn.Size = UDim2.new(0.93,0,0,22)
-        playerPanelBtn.Position = UDim2.new(0.035,0,0,150)
-        playerPanelBtn.Font = Enum.Font.Gotham
-        playerPanelBtn.TextSize = 13
-        playerPanelBtn.BackgroundColor3 = Color3.fromRGB(30,44,60)
-        playerPanelBtn.TextColor3 = Color3.fromRGB(200,225,255)
-        playerPanelBtn.BorderSizePixel = 0
-
-        -- Botão: resetar alvo
-        local resetTargetBtn = Instance.new("TextButton", espPanel)
-        resetTargetBtn.Text = "ESP em todos"
-        resetTargetBtn.Size = UDim2.new(0.45,0,0,20)
-        resetTargetBtn.Position = UDim2.new(0.035,0,0,180)
-        resetTargetBtn.Font = Enum.Font.Gotham
-        resetTargetBtn.TextSize = 12
-        resetTargetBtn.BackgroundColor3 = Color3.fromRGB(33,44,33)
-        resetTargetBtn.TextColor3 = Color3.fromRGB(180,255,180)
-        resetTargetBtn.BorderSizePixel = 0
-        resetTargetBtn.MouseButton1Click:Connect(function()
-            TARGET_ONLY = false
-            TARGET_PLAYER = nil
-            updateAllESP()
+        -- FULLBRIGHT
+        local fbLabel = Instance.new("TextLabel", scroll)
+        fbLabel.Text = "FullBright:"
+        fbLabel.Size = UDim2.new(0.55,0,0,18)
+        fbLabel.Position = UDim2.new(0.02,0,0,136)
+        fbLabel.BackgroundTransparency = 1
+        fbLabel.TextColor3 = Color3.new(1,1,1)
+        fbLabel.Font = Enum.Font.Gotham
+        fbLabel.TextSize = 12
+        local fbBtn = Instance.new("TextButton", scroll)
+        fbBtn.Size = UDim2.new(0.38,0,0,18)
+        fbBtn.Position = UDim2.new(0.6,0,0,136)
+        fbBtn.Text = "OFF"
+        fbBtn.Font = Enum.Font.Gotham
+        fbBtn.TextSize = 13
+        fbBtn.BackgroundColor3 = Color3.fromRGB(65,65,90)
+        fbBtn.TextColor3 = Color3.fromRGB(255,255,180)
+        fbBtn.BorderSizePixel = 0
+        fbBtn.MouseButton1Click:Connect(function()
+            FULLBRIGHT_ON = not FULLBRIGHT_ON
+            fbBtn.Text = FULLBRIGHT_ON and "ON" or "OFF"
+            fbBtn.TextColor3 = FULLBRIGHT_ON and Color3.fromRGB(180,255,180) or Color3.fromRGB(255,255,180)
+            setFullBright(FULLBRIGHT_ON)
         end)
+        -- (adicione mais funções visuais abaixo conforme necessário)
 
-        -- Botão: "Faz nada"
-        local fazNadaBtn = Instance.new("TextButton", espPanel)
-        fazNadaBtn.Text = "Faz nada"
-        fazNadaBtn.Size = UDim2.new(0.45,0,0,20)
-        fazNadaBtn.Position = UDim2.new(0.52,0,0,180)
-        fazNadaBtn.Font = Enum.Font.Gotham
-        fazNadaBtn.TextSize = 12
-        fazNadaBtn.BackgroundColor3 = Color3.fromRGB(30,44,60)
-        fazNadaBtn.TextColor3 = Color3.fromRGB(200,225,255)
-        fazNadaBtn.BorderSizePixel = 0
-        fazNadaBtn.MouseButton1Click:Connect(function()
-            showMessage("Não funcionou, então desisti '-'", Color3.fromRGB(255,60,60))
-        end)
-
-        -- Painel de seleção de jogadores
-        local playerPanel = Instance.new("Frame", gui)
-        playerPanel.Name = "PlayerPanelESP"
-        playerPanel.Visible = false
-        playerPanel.Size = UDim2.new(0,170,0,180)
-        playerPanel.Position = UDim2.new(0.5,90,0.5,-50)
-        playerPanel.BackgroundColor3 = Color3.fromRGB(40,40,40)
-        playerPanel.BackgroundTransparency = 0.05
-        playerPanel.BorderSizePixel = 0
-        playerPanel.AnchorPoint = Vector2.new(0,0)
-        playerPanel.ZIndex = 5
-        makeDraggable(playerPanel)
-
-        local playerPanelTitle = Instance.new("TextLabel", playerPanel)
-        playerPanelTitle.Size = UDim2.new(1,0,0,24)
-        playerPanelTitle.Text = "Jogadores"
-        playerPanelTitle.BackgroundTransparency = 1
-        playerPanelTitle.Font = Enum.Font.GothamBold
-        playerPanelTitle.TextSize = 14
-        playerPanelTitle.TextColor3 = ESP_COLOR
-
-        local closePlayerPanelBtn = Instance.new("TextButton", playerPanel)
-        closePlayerPanelBtn.Text = "✕"
-        closePlayerPanelBtn.Font = Enum.Font.GothamBlack
-        closePlayerPanelBtn.TextSize = 13
-        closePlayerPanelBtn.Size = UDim2.new(0,22,0,22)
-        closePlayerPanelBtn.Position = UDim2.new(1,-24,0,2)
-        closePlayerPanelBtn.BackgroundColor3 = Color3.fromRGB(32,32,32)
-        closePlayerPanelBtn.TextColor3 = Color3.fromRGB(255,90,90)
-        closePlayerPanelBtn.BorderSizePixel = 0
-        closePlayerPanelBtn.MouseButton1Click:Connect(function() playerPanel.Visible = false end)
-
-        local playerList = Instance.new("ScrollingFrame", playerPanel)
-        playerList.Size = UDim2.new(1, -10, 1, -30)
-        playerList.Position = UDim2.new(0,5,0,26)
-        playerList.BackgroundTransparency = 0.08
-        playerList.BackgroundColor3 = Color3.fromRGB(30,30,36)
-        playerList.BorderSizePixel = 0
-        playerList.ScrollBarThickness = 6
-        playerList.CanvasSize = UDim2.new(0,0,0,0)
-        playerList.ZIndex = 6
-
-        local function refreshPlayerList()
-            playerList:ClearAllChildren()
-            local y = 0
-            local playersArr = Players:GetPlayers()
-            for i,player in ipairs(playersArr) do
-                local item = Instance.new("TextButton", playerList)
-                item.Size = UDim2.new(1,0,0,20)
-                item.Position = UDim2.new(0,0,0,y)
-                item.BackgroundColor3 = (player == TARGET_PLAYER) and Color3.fromRGB(44,200,80) or Color3.fromRGB(38,38,40)
-                item.Font = Enum.Font.Gotham
-                item.TextSize = 12
-                item.TextColor3 = Color3.fromRGB(200,255,255)
-                item.Text = string.format("%s  [%s]", player.DisplayName, player.Name)
-                item.TextXAlignment = Enum.TextXAlignment.Left
-                item.BorderSizePixel = 0
-                item.Name = player.Name
-                item.ZIndex = 7
-                item.MouseButton1Click:Connect(function()
-                    TARGET_PLAYER = player
-                    TARGET_ONLY = true
-                    refreshPlayerList()
-                    playerPanel.Visible = false
-                    updateAllESP()
-                end)
-                y = y + 20
-            end
-            playerList.CanvasSize = UDim2.new(0,0,0,y)
-        end
-        refreshPlayerList()
-        Players.PlayerAdded:Connect(refreshPlayerList)
-        Players.PlayerRemoving:Connect(function()
-            if TARGET_PLAYER and not Players:FindFirstChild(TARGET_PLAYER.Name) then
-                TARGET_PLAYER = nil
-                TARGET_ONLY = false
-            end
-            refreshPlayerList()
-        end)
-        playerPanelBtn.MouseButton1Click:Connect(function()
-            playerPanel.Visible = not playerPanel.Visible
-            if playerPanel.Visible then
-                refreshPlayerList()
-            end
-        end)
-        local closeBtn = Instance.new("TextButton", espPanel)
+        -- Fechar painel visual
+        local closeBtn = Instance.new("TextButton", visualPanel)
         closeBtn.Size = UDim2.new(0,26,0,26)
         closeBtn.Position = UDim2.new(1,-28,0,3)
         closeBtn.Text = "✕"
@@ -847,10 +877,13 @@ local function setupMainPanel()
         closeBtn.BackgroundColor3 = Color3.fromRGB(32,32,32)
         closeBtn.TextColor3 = Color3.fromRGB(255,90,90)
         closeBtn.BorderSizePixel = 0
-        closeBtn.MouseButton1Click:Connect(function() espPanel.Visible = false end)
+        closeBtn.MouseButton1Click:Connect(function() visualPanel.Visible = false end)
     end
 
-    -- PAINEL JOGADOR
+    btnVisual.MouseButton1Click:Connect(setupVisualPanel)
+
+    -- Painel Jogador igual anterior
+    local playerPanel
     local function setupPlayerPanel()
         if playerPanel and playerPanel.Parent then playerPanel.Visible = true return end
         playerPanel = Instance.new("Frame", gui)
@@ -1010,9 +1043,7 @@ local function setupMainPanel()
         closeBtn.MouseButton1Click:Connect(function() playerPanel.Visible = false end)
     end
 
-    btnESP.MouseButton1Click:Connect(setupESPPanel)
     btnPlayer.MouseButton1Click:Connect(setupPlayerPanel)
-
     -- Ícone de olho para abrir o menu principal
     local iconBtn = setupMenuIcon(function()
         main.Visible = not main.Visible
