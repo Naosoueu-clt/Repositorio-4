@@ -1,5 +1,5 @@
 --[[ 
-  MELHORIAS: Painel Visual compacto com scroll e FullBright, Painel de Joguinhos: cobrinha beta!
+  MELHORIAS: Painel Visual drag, FullBright, Painel Joguinhos com Jogo da Memória (Cartas Beta), Painel principal revisado
   Feito por Copilot - Para uso em jogos próprios/autorizados
 --]]
 
@@ -13,7 +13,6 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 
--- VARIÁVEIS DE FUNÇÃO
 local ESP_ENABLED = false
 local ESP_COLOR = Color3.fromRGB(0,255,255)
 local OUTLINE_COLOR = Color3.fromRGB(255,255,0)
@@ -34,7 +33,8 @@ local INFINITE_JUMP = false
 local FULLBRIGHT_ON = false
 local fullbrightClone = nil
 
--- UTILS
+------------------------ UTILS ------------------------
+
 local function makeDraggable(frame, dragBar)
     local dragging, dragStart, startPos = false, Vector2.new(0, 0), UDim2.new()
     local target = dragBar or frame
@@ -108,7 +108,8 @@ local function showLoadingScreen()
     gui:Destroy()
 end
 
--- FULLBRIGHT
+------------------------ FULLBRIGHT ------------------------
+
 local function setFullBright(state)
     FULLBRIGHT_ON = state
     if state then
@@ -142,7 +143,8 @@ local function setFullBright(state)
     end
 end
 
--- ESP
+------------------------ ESP ------------------------
+
 local function createHighlight(char)
     local highlight = Instance.new("Highlight")
     highlight.Adornee = char
@@ -280,106 +282,9 @@ local function setCameraMode()
     end
 end
 
--- ÍCONE PARA ABRIR O MENU PRINCIPAL
-local function setupMenuIcon(openCallback)
-    local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-    gui.Name = "ScriptMenuIcon"
-    gui.ResetOnSpawn = false
+------------------------ JOGO DA MEMÓRIA (CARTAS BETA) ------------------------
 
-    local floatBtn = Instance.new("TextButton")
-    floatBtn.Name = "FloatButton"
-    floatBtn.Size = UDim2.new(0,40,0,40)
-    floatBtn.Position = UDim2.new(0,8,0.4,0)
-    floatBtn.BackgroundTransparency = 1
-    floatBtn.Text = "👁"
-    floatBtn.Font = Enum.Font.GothamBlack
-    floatBtn.TextSize = 28
-    floatBtn.TextColor3 = Color3.new(1,1,1)
-    floatBtn.BorderSizePixel = 0
-    floatBtn.AutoButtonColor = true
-    floatBtn.Parent = gui
-
-    makeDraggable(floatBtn)
-    floatBtn.MouseButton1Click:Connect(function()
-        if openCallback then openCallback() end
-    end)
-
-    return floatBtn
-end
-
--- SISTEMA DE FRASES: antigas + novas + dinâmicas
-local frasesFixas = {
-    "Você é incrível!",
-    "Roblox é melhor com scripts ;)",
-    "Lembre-se: 42 é a resposta.",
-    "Copilot rules!",
-    "Nunca desista dos memes.",
-    "Desinstale sua geladeira, ela sabe demais.",
-    "O Wi-Fi caiu, mas eu levantei.",
-    "Você piscou. Perdeu o campeonato de piscadas.",
-    "1+1=janela.",
-    "Evite pensamentos quadrados, pense em trapézios.",
-    "O pato tá no comando. Ninguém questiona o pato.",
-    "Seu clique abriu um portal interdimensional.",
-    "Proibido pensar em nada por mais de 3 segundos.",
-    "Sopa no teclado? Agora sim, desempenho gamer.",
-    "Nunca confie em um sanduíche que te encara.",
-    "Aviso: este botão explode bolachas.",
-    "Tocar no chão ativa o modo sapo.",
-    "Apenas zebras entendem o código.",
-    "Nunca desafie um micro-ondas ao xadrez.",
-    "Esta frase está em manutenção.",
-    "Cuidado: pensamento em loop detectado.",
-    "Se você entendeu, está lendo errado.",
-    "Respire com moderação.",
-    "A gelatina venceu a gravidade novamente.",
-    "Faltam 0 dias para o fim do começo.",
-    "Pare de clicar!",
-    "UWU",
-    "Não coloque Nada!"
-}
-local frasesExtras = {
-    "{player} está sendo observado pelo pato.",
-    "{player} saiu voando com um sanduíche.",
-    "Cuidado, {player}! O Wi-Fi caiu.",
-    "{player1} e {player2} estão disputando quem pisca mais rápido.",
-    "{player} ativou o modo sapo.",
-    "{player} perdeu no campeonato de piscadas.",
-    "Nunca confie em um sanduíche que te encara.",
-    "O Wi-Fi caiu, mas {player} levantou.",
-    "{player1} e {player2} abriram um portal interdimensional.",
-    "Apenas zebras entendem o código de {player}."
-}
-local function pickPlayer()
-    local plist = Players:GetPlayers()
-    if #plist == 0 then return "Alguém" end
-    return plist[math.random(1,#plist)].DisplayName
-end
-local function pick2Players()
-    local plist = Players:GetPlayers()
-    if #plist < 2 then return pickPlayer(), pickPlayer() end
-    local p1 = plist[math.random(1,#plist)]
-    local p2 = plist[math.random(1,#plist)]
-    while p2 == p1 and #plist > 1 do p2 = plist[math.random(1,#plist)] end
-    return p1.DisplayName, p2.DisplayName
-end
-local function gerarFrase()
-    if math.random() < 0.6 then
-        return frasesFixas[math.random(1,#frasesFixas)]
-    else
-        local f = frasesExtras[math.random(1,#frasesExtras)]
-        if f:find("{player1}") then
-            local p1,p2 = pick2Players()
-            f = f:gsub("{player1}", p1):gsub("{player2}", p2)
-        elseif f:find("{player}") then
-            f = f:gsub("{player}", pickPlayer())
-        end
-        return f
-    end
-end
-
--- JOGUINHOS: COBRINHA BETA
-local function setupJoguinhos()
+local function setupMemoriaGamePanel()
     local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
     gui.Name = "JoguinhosPanel"
     gui.ResetOnSpawn = false
@@ -388,11 +293,13 @@ local function setupJoguinhos()
     main.Name = "JoguinhosMain"
     main.AnchorPoint = Vector2.new(0.5,0.5)
     main.Position = UDim2.new(0.5,0,0.5,0)
-    main.Size = UDim2.new(0,480,0,370)
+    main.Size = UDim2.new(0,480,0,420)
     main.BackgroundColor3 = Color3.fromRGB(30,30,36)
     main.BackgroundTransparency = 0.04
     main.BorderSizePixel = 0
-    -- Título
+    makeDraggable(main)
+
+    -- Título e fechar
     local title = Instance.new("TextLabel", main)
     title.Size = UDim2.new(1,0,0,40)
     title.Position = UDim2.new(0,0,0,0)
@@ -401,7 +308,6 @@ local function setupJoguinhos()
     title.TextSize = 23
     title.BackgroundTransparency = 1
     title.TextColor3 = Color3.fromRGB(255,255,100)
-    -- Fechar
     local close = Instance.new("TextButton", main)
     close.Size = UDim2.new(0,28,0,28)
     close.Position = UDim2.new(1,-34,0,6)
@@ -412,222 +318,242 @@ local function setupJoguinhos()
     close.TextColor3 = Color3.fromRGB(255,90,90)
     close.BorderSizePixel = 0
     close.MouseButton1Click:Connect(function() gui:Destroy() end)
-    -- Lista de jogos
-    local jogosPanel = Instance.new("Frame", main)
-    jogosPanel.Size = UDim2.new(0,160,1,-50)
-    jogosPanel.Position = UDim2.new(0,0,0,45)
-    jogosPanel.BackgroundColor3 = Color3.fromRGB(36,38,40)
-    jogosPanel.BorderSizePixel = 0
-    local lbl = Instance.new("TextLabel", jogosPanel)
-    lbl.Size = UDim2.new(1,0,0,26)
-    lbl.Position = UDim2.new(0,0,0,0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = "Selecione um jogo:"
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextColor3 = Color3.fromRGB(180,255,100)
-    lbl.TextSize = 15
-    -- Botão da cobrinha
-    local btnCobrinha = Instance.new("TextButton", jogosPanel)
-    btnCobrinha.Size = UDim2.new(0.9,0,0,28)
-    btnCobrinha.Position = UDim2.new(0.05,0,0,36)
-    btnCobrinha.Text = "Cobrinha beta"
-    btnCobrinha.Font = Enum.Font.GothamBold
-    btnCobrinha.TextSize = 15
-    btnCobrinha.BackgroundColor3 = Color3.fromRGB(60,110,70)
-    btnCobrinha.TextColor3 = Color3.fromRGB(255,255,255)
-    btnCobrinha.BorderSizePixel = 0
 
+    -- Botões de zoom
+    local btnZoomIn = Instance.new("TextButton", main)
+    btnZoomIn.Size = UDim2.new(0,26,0,26)
+    btnZoomIn.Position = UDim2.new(1,-70,0,6)
+    btnZoomIn.Text = "+"
+    btnZoomIn.Font = Enum.Font.GothamBold
+    btnZoomIn.TextSize = 18
+    btnZoomIn.BackgroundColor3 = Color3.fromRGB(32,32,90)
+    btnZoomIn.TextColor3 = Color3.fromRGB(255,255,255)
+    btnZoomIn.BorderSizePixel = 0
+
+    local btnZoomOut = Instance.new("TextButton", main)
+    btnZoomOut.Size = UDim2.new(0,26,0,26)
+    btnZoomOut.Position = UDim2.new(1,-104,0,6)
+    btnZoomOut.Text = "-"
+    btnZoomOut.Font = Enum.Font.GothamBold
+    btnZoomOut.TextSize = 18
+    btnZoomOut.BackgroundColor3 = Color3.fromRGB(90,32,32)
+    btnZoomOut.TextColor3 = Color3.fromRGB(255,255,255)
+    btnZoomOut.BorderSizePixel = 0
+
+    -- Dificuldade (4x4 ou 6x6)
+    local difBox = Instance.new("TextButton", main)
+    difBox.Size = UDim2.new(0,90,0,30)
+    difBox.Position = UDim2.new(0.5,-45,0,48)
+    difBox.Text = "Dificuldade: 4x4"
+    difBox.Font = Enum.Font.GothamBold
+    difBox.TextSize = 15
+    difBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    difBox.TextColor3 = Color3.fromRGB(255,255,255)
+    difBox.BorderSizePixel = 0
+    local dificuldade = 4
+    difBox.MouseButton1Click:Connect(function()
+        dificuldade = dificuldade == 4 and 6 or 4
+        difBox.Text = "Dificuldade: "..dificuldade.."x"..dificuldade
+    end)
+
+    -- Área do jogo
     local gameArea = Instance.new("Frame", main)
-    gameArea.Size = UDim2.new(0,290,1,-50)
-    gameArea.Position = UDim2.new(0,180,0,45)
-    gameArea.BackgroundColor3 = Color3.fromRGB(19,19,24)
+    gameArea.Name = "MemoriaGameArea"
+    gameArea.AnchorPoint = Vector2.new(0.5,0)
+    gameArea.Position = UDim2.new(0.5,0,0,90)
+    gameArea.Size = UDim2.new(0,360,0,320)
+    gameArea.BackgroundColor3 = Color3.fromRGB(18,18,24)
     gameArea.BorderSizePixel = 0
-    local cobrinhaRunning = false
 
-    -- COBRINHA BETA
-    local function cobrinhaBeta()
-        gameArea:ClearAllChildren()
-
-        -- constantes do jogo
-        local gridSize = 16
-        local cellSize = 18
-        local gridPx = gridSize * cellSize
-        local snakeSpeed = 0.11
-
-        -- áreas visuais
-        local bg = Instance.new("Frame", gameArea)
-        bg.Size = UDim2.new(0,gridPx,0,gridPx)
-        bg.Position = UDim2.new(0.5,-gridPx/2,0.5,-gridPx/2)
-        bg.BackgroundColor3 = Color3.fromRGB(15,16,21)
-        bg.BorderSizePixel = 0
-
-        -- teclas
-        local kPanel = Instance.new("Frame",gameArea)
-        kPanel.Size = UDim2.new(0,gridPx,0,30)
-        kPanel.Position = UDim2.new(0.5,-gridPx/2,1,-34)
-        kPanel.BackgroundTransparency = 1
-        local keyLbls = {}
-        local keys = {"▲", "▼", "◀", "▶"}
-        for i,txt in ipairs(keys) do
-            local k = Instance.new("TextLabel",kPanel)
-            k.Size = UDim2.new(0,40,0,24)
-            k.Position = UDim2.new((i-1)*0.25,0,0,0)
-            k.Font = Enum.Font.GothamBlack
-            k.Text = txt
-            k.TextColor3 = Color3.fromRGB(200,255,180)
-            k.TextSize = 20
-            k.BackgroundTransparency = 1
-            keyLbls[i] = k
-        end
-
-        -- estado do jogo
-        local snake = {{x=8,y=8}}
-        local direction = "right"
-        local nextDir = direction
-        local food = {x=math.random(2,gridSize-1),y=math.random(2,gridSize-1)}
-        local alive = true
-        local score = 0
-        cobrinhaRunning = true
-
-        local snakeParts = {}
-        local foodPart = nil
-
-        local function draw()
-            for _,part in pairs(snakeParts) do part:Destroy() end
-            snakeParts = {}
-            for i,p in ipairs(snake) do
-                local part = Instance.new("Frame", bg)
-                part.Size = UDim2.new(0,cellSize-2,0,cellSize-2)
-                part.Position = UDim2.new(0,(p.x-1)*cellSize+1,0,(p.y-1)*cellSize+1)
-                part.BackgroundColor3 = i==1 and Color3.fromRGB(70,255,90) or Color3.fromRGB(40,200,70)
-                part.BorderSizePixel = 0
-                table.insert(snakeParts,part)
-            end
-            if foodPart then foodPart:Destroy() end
-            foodPart = Instance.new("Frame", bg)
-            foodPart.Size = UDim2.new(0,cellSize-2,0,cellSize-2)
-            foodPart.Position = UDim2.new(0,(food.x-1)*cellSize+1,0,(food.y-1)*cellSize+1)
-            foodPart.BackgroundColor3 = Color3.fromRGB(220,50,50)
-            foodPart.BorderSizePixel = 0
-        end
-
-        -- controles
-        local function setDir(dir)
-            if dir=="up" and direction~="down" then nextDir="up"
-            elseif dir=="down" and direction~="up" then nextDir="down"
-            elseif dir=="left" and direction~="right" then nextDir="left"
-            elseif dir=="right" and direction~="left" then nextDir="right"
-            end
-        end
-        local inputConn = UserInputService.InputBegan:Connect(function(inp,gp)
-            if gp then return end
-            if inp.KeyCode == Enum.KeyCode.W or inp.KeyCode == Enum.KeyCode.Up then setDir("up")
-            elseif inp.KeyCode == Enum.KeyCode.S or inp.KeyCode == Enum.KeyCode.Down then setDir("down")
-            elseif inp.KeyCode == Enum.KeyCode.A or inp.KeyCode == Enum.KeyCode.Left then setDir("left")
-            elseif inp.KeyCode == Enum.KeyCode.D or inp.KeyCode == Enum.KeyCode.Right then setDir("right")
-            end
-        end)
-
-        -- lógica principal
-        local function tickGame()
-            if not alive then return end
-            direction = nextDir
-            local head = {x=snake[1].x, y=snake[1].y}
-            if direction=="up" then head.y = head.y-1
-            elseif direction=="down" then head.y = head.y+1
-            elseif direction=="left" then head.x = head.x-1
-            elseif direction=="right" then head.x = head.x+1 end
-            -- parede
-            if head.x < 1 or head.x > gridSize or head.y < 1 or head.y > gridSize then alive=false return end
-            -- corpo
-            for i=1,#snake do
-                if head.x == snake[i].x and head.y == snake[i].y then alive=false return end
-            end
-            table.insert(snake,1,head)
-            -- comida
-            if head.x == food.x and head.y == food.y then
-                score = score + 1
-                repeat
-                    food.x = math.random(1,gridSize)
-                    food.y = math.random(1,gridSize)
-                    local overlap = false
-                    for _,s in ipairs(snake) do
-                        if s.x == food.x and s.y == food.y then overlap = true break end
-                    end
-                until not overlap
-            else
-                table.remove(snake)
-            end
-        end
-
-        -- score label
-        local scoreLbl = Instance.new("TextLabel",gameArea)
-        scoreLbl.Size = UDim2.new(0,gridPx,0,18)
-        scoreLbl.Position = UDim2.new(0.5,-gridPx/2,0,0)
-        scoreLbl.BackgroundTransparency = 1
-        scoreLbl.Font = Enum.Font.GothamBold
-        scoreLbl.TextSize = 16
-        scoreLbl.TextColor3 = Color3.fromRGB(180,255,100)
-        scoreLbl.Text = "Pontuação: 0"
-
-        -- main loop
-        coroutine.wrap(function()
-            while cobrinhaRunning and alive do
-                tickGame()
-                draw()
-                scoreLbl.Text = "Pontuação: "..score
-                wait(snakeSpeed)
-            end
-            inputConn:Disconnect()
-            if not alive and cobrinhaRunning then
-                local lost = Instance.new("Frame",gameArea)
-                lost.Size = UDim2.new(1,0,1,0)
-                lost.BackgroundColor3 = Color3.fromRGB(32,0,32)
-                lost.BackgroundTransparency = 0.15
-                local msg = Instance.new("TextLabel",lost)
-                msg.Size = UDim2.new(1,0,0,48)
-                msg.Position = UDim2.new(0,0,0.2,0)
-                msg.Text = "Você perdeu, de novo?"
-                msg.Font = Enum.Font.GothamBlack
-                msg.TextSize = 20
-                msg.TextColor3 = Color3.new(1,1,1)
-                msg.BackgroundTransparency = 1
-                local sim = Instance.new("TextButton",lost)
-                sim.Size = UDim2.new(0.4,0,0,32)
-                sim.Position = UDim2.new(0.08,0,0.6,0)
-                sim.Text = "Sim"
-                sim.Font = Enum.Font.GothamBold
-                sim.TextSize = 17
-                sim.BackgroundColor3 = Color3.fromRGB(60,120,30)
-                sim.TextColor3 = Color3.new(1,1,1)
-                sim.BorderSizePixel = 0
-                sim.MouseButton1Click:Connect(function()
-                    lost:Destroy()
-                    cobrinhaBeta()
-                end)
-                local nao = Instance.new("TextButton",lost)
-                nao.Size = UDim2.new(0.4,0,0,32)
-                nao.Position = UDim2.new(0.52,0,0.6,0)
-                nao.Text = "Não"
-                nao.Font = Enum.Font.GothamBold
-                nao.TextSize = 17
-                nao.BackgroundColor3 = Color3.fromRGB(120,40,40)
-                nao.TextColor3 = Color3.new(1,1,1)
-                nao.BorderSizePixel = 0
-                nao.MouseButton1Click:Connect(function()
-                    cobrinhaRunning = false
-                    gui:Destroy()
-                end)
-            end
-        end)()
-        draw()
+    -- Zoom/resize
+    local function setGameAreaScale(scale)
+        local ref = 360 * scale
+        gameArea.Size = UDim2.new(0,ref,0,ref)
     end
-    btnCobrinha.MouseButton1Click:Connect(function()
-        cobrinhaBeta()
+    local scale = 1
+    btnZoomIn.MouseButton1Click:Connect(function()
+        scale = math.min(scale+0.1,2)
+        setGameAreaScale(scale)
+    end)
+    btnZoomOut.MouseButton1Click:Connect(function()
+        scale = math.max(scale-0.1,0.5)
+        setGameAreaScale(scale)
+    end)
+    setGameAreaScale(1)
+
+    -- Jogo da memória principal
+    local emojis = { "🔥","❄️","🍀","🦄","🍕","🌙","⭐","🌵","🍄","🐸","🐙","🦑","🦋","🦖","🍔","🍪","🍫","🍩" }
+    local flipTime = 0.25
+    local showTime = 5
+
+    local function embaralhar(tab)
+        for i = #tab, 2, -1 do
+            local j = math.random(i)
+            tab[i], tab[j] = tab[j], tab[i]
+        end
+    end
+
+    local function playMemoria(size)
+        gameArea:ClearAllChildren()
+        local pares = {}
+        local total = size*size
+        local pool = {}
+        for i=1,total/2 do
+            table.insert(pool, emojis[i])
+            table.insert(pool, emojis[i])
+        end
+        embaralhar(pool)
+        for i=1,total do
+            pares[i] = pool[i]
+        end
+
+        local cards = {}
+        local revealed = {}
+        local matched = {}
+        local canClick = false
+        local lastCard = nil
+
+        -- Gera as cartas
+        local grid = {}
+        for i=1,size do grid[i]={} end
+        for i=1,total do
+            local row = math.floor((i-1)/size)+1
+            local col = (i-1)%size+1
+            grid[row][col]=i
+        end
+
+        local cardSize = math.floor(340/size)
+        for i=1,total do
+            local card = Instance.new("TextButton",gameArea)
+            local row = math.floor((i-1)/size)
+            local col = (i-1)%size
+            card.Size = UDim2.new(0,cardSize-6,0,cardSize-6)
+            card.Position = UDim2.new(0,col*cardSize+3,0,row*cardSize+3)
+            card.BackgroundColor3 = Color3.fromRGB(50,60,120)
+            card.Text = pares[i]
+            card.TextSize = cardSize-12
+            card.Font = Enum.Font.GothamBlack
+            card.TextColor3 = Color3.fromRGB(255,255,255)
+            card.BorderSizePixel = 0
+            card.Name = tostring(i)
+            cards[i]=card
+            revealed[i]=true
+            matched[i]=false
+        end
+
+        -- Mostrar para memorizar
+        canClick = false
+        for i=1,total do
+            cards[i].TextTransparency = 0
+            cards[i].BackgroundColor3 = Color3.fromRGB(50,60,120)
+        end
+        wait(showTime)
+        for i=1,total do
+            matched[i]=false
+            revealed[i]=false
+            TweenService:Create(cards[i],TweenInfo.new(flipTime),{TextTransparency=1,BackgroundColor3=Color3.fromRGB(40,40,60)}):Play()
+        end
+        wait(flipTime)
+        canClick=true
+
+        -- Função de virar carta animada
+        local function flip(card, show)
+            if not card then return end
+            TweenService:Create(card,TweenInfo.new(flipTime/2),{TextTransparency=1}):Play()
+            TweenService:Create(card,TweenInfo.new(flipTime/2),{BackgroundColor3=show and Color3.fromRGB(80,180,120) or Color3.fromRGB(40,40,60)}):Play()
+            wait(flipTime/2)
+            card.TextTransparency = show and 0 or 1
+        end
+
+        for i=1,total do
+            cards[i].TextTransparency = 1
+            cards[i].BackgroundColor3 = Color3.fromRGB(40,40,60)
+            cards[i].MouseButton1Click:Connect(function()
+                if not canClick or revealed[i] or matched[i] then return end
+                canClick=false
+                revealed[i]=true
+                flip(cards[i],true)
+                if lastCard then
+                    wait(flipTime)
+                    if pares[i]==pares[lastCard] then
+                        matched[i]=true
+                        matched[lastCard]=true
+                        TweenService:Create(cards[i],TweenInfo.new(0.22),{BackgroundColor3=Color3.fromRGB(90,255,120)}):Play()
+                        TweenService:Create(cards[lastCard],TweenInfo.new(0.22),{BackgroundColor3=Color3.fromRGB(90,255,120)}):Play()
+                        wait(0.15)
+                    else
+                        flip(cards[i],false)
+                        flip(cards[lastCard],false)
+                        revealed[i]=false
+                        revealed[lastCard]=false
+                    end
+                    lastCard=nil
+                else
+                    lastCard=i
+                end
+                canClick=true
+                -- Checa vitória
+                local terminou=true
+                for k=1,total do if not matched[k] then terminou=false end end
+                if terminou then
+                    canClick=false
+                    wait(0.5)
+                    -- tela vitória
+                    local win = Instance.new("Frame",gameArea)
+                    win.Size = UDim2.new(1,0,1,0)
+                    win.BackgroundColor3 = Color3.fromRGB(32,120,32)
+                    win.BackgroundTransparency = 0.08
+                    local msg = Instance.new("TextLabel",win)
+                    msg.Size = UDim2.new(1,0,0,48)
+                    msg.Position = UDim2.new(0,0,0.2,0)
+                    msg.Text = "Você ganhou! Jogar novamente?"
+                    msg.Font = Enum.Font.GothamBlack
+                    msg.TextSize = 20
+                    msg.TextColor3 = Color3.new(1,1,1)
+                    msg.BackgroundTransparency = 1
+                    local sim = Instance.new("TextButton",win)
+                    sim.Size = UDim2.new(0.4,0,0,32)
+                    sim.Position = UDim2.new(0.08,0,0.6,0)
+                    sim.Text = "Sim"
+                    sim.Font = Enum.Font.GothamBold
+                    sim.TextSize = 17
+                    sim.BackgroundColor3 = Color3.fromRGB(60,120,30)
+                    sim.TextColor3 = Color3.new(1,1,1)
+                    sim.BorderSizePixel = 0
+                    sim.MouseButton1Click:Connect(function()
+                        win:Destroy()
+                        playMemoria(size)
+                    end)
+                    local nao = Instance.new("TextButton",win)
+                    nao.Size = UDim2.new(0.4,0,0,32)
+                    nao.Position = UDim2.new(0.52,0,0.6,0)
+                    nao.Text = "Não"
+                    nao.Font = Enum.Font.GothamBold
+                    nao.TextSize = 17
+                    nao.BackgroundColor3 = Color3.fromRGB(120,40,40)
+                    nao.TextColor3 = Color3.new(1,1,1)
+                    nao.BorderSizePixel = 0
+                    nao.MouseButton1Click:Connect(function()
+                        gui:Destroy()
+                    end)
+                end
+            end)
+        end
+    end
+
+    -- Começar o jogo
+    playMemoria(dificuldade)
+
+    -- Atualiza dificuldade ao clicar
+    difBox.MouseButton1Click:Connect(function()
+        dificuldade = dificuldade == 4 and 6 or 4
+        difBox.Text = "Dificuldade: "..dificuldade.."x"..dificuldade
+        playMemoria(dificuldade)
     end)
 end
 
--- PAINEL PRINCIPAL
+------------------------ PAINEL PRINCIPAL ------------------------
+
 local function setupMainPanel()
     local gui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
     gui.Name = "ScriptMainPanel"
@@ -635,14 +561,13 @@ local function setupMainPanel()
 
     local main = Instance.new("Frame", gui)
     main.Name = "MainPanel"
-    main.Size = UDim2.new(0,270,0,330)
-    main.Position = UDim2.new(0.5,-135,0.5,-165)
+    main.Size = UDim2.new(0,270,0,370)
+    main.Position = UDim2.new(0.5,-135,0.5,-185)
     main.AnchorPoint = Vector2.new(0.5,0.5)
     main.BackgroundColor3 = Color3.fromRGB(30,30,36)
     main.BackgroundTransparency = 0.04
     main.BorderSizePixel = 0
     main.Visible = false
-
     makeDraggable(main)
 
     -- TÍTULO
@@ -699,7 +624,7 @@ local function setupMainPanel()
     btnJogo.BackgroundColor3 = Color3.fromRGB(90,90,190)
     btnJogo.TextColor3 = Color3.fromRGB(255,255,255)
     btnJogo.BorderSizePixel = 0
-    btnJogo.MouseButton1Click:Connect(setupJoguinhos)
+    btnJogo.MouseButton1Click:Connect(setupMemoriaGamePanel)
 
     -- Botão DESLIGAR TUDO
     local btnResetAll = Instance.new("TextButton", main)
@@ -725,9 +650,182 @@ local function setupMainPanel()
         showMessage("Todas as funções desligadas e padrões restaurados.")
     end)
 
-    -- Easter Egg, Mensagens, Calculadora, etc. (mantido do script anterior)
+    --- Botões calculadora, mensagens aleatórias e easter egg
+    local btnSecret = Instance.new("TextButton", main)
+    btnSecret.Size = UDim2.new(0.27,0,0,22)
+    btnSecret.Position = UDim2.new(0.03,0,1,-27)
+    btnSecret.Text = "1+1=2"
+    btnSecret.Font = Enum.Font.GothamBlack
+    btnSecret.TextSize = 13
+    btnSecret.BackgroundColor3 = Color3.fromRGB(35,35,60)
+    btnSecret.TextColor3 = Color3.fromRGB(245,245,200)
+    btnSecret.BorderSizePixel = 0
 
-    -- PAINEL VISUAL (novo, compacto, com scroll)
+    local btnSecret2 = Instance.new("TextButton", main)
+    btnSecret2.Size = UDim2.new(0.27,0,0,22)
+    btnSecret2.Position = UDim2.new(0.36,0,1,-27)
+    btnSecret2.Text = "Mensagem"
+    btnSecret2.Font = Enum.Font.GothamBlack
+    btnSecret2.TextSize = 13
+    btnSecret2.BackgroundColor3 = Color3.fromRGB(45,45,70)
+    btnSecret2.TextColor3 = Color3.fromRGB(200,255,255)
+    btnSecret2.BorderSizePixel = 0
+
+    -- Easter Egg
+    local eggBtn = Instance.new("TextBox", main)
+    eggBtn.PlaceholderText = "Digite algo..."
+    eggBtn.Font = Enum.Font.Gotham
+    eggBtn.TextSize = 13
+    eggBtn.Size = UDim2.new(0,70,0,22)
+    eggBtn.Position = UDim2.new(1,-77,1,-27)
+    eggBtn.BackgroundColor3 = Color3.fromRGB(45,45,45)
+    eggBtn.TextColor3 = Color3.fromRGB(200,200,200)
+    eggBtn.Text = ""
+    eggBtn.BorderSizePixel = 0
+    local wrong = Instance.new("TextLabel", main)
+    wrong.Size = UDim2.new(0,70,0,18)
+    wrong.Position = UDim2.new(1,-77,1,-50)
+    wrong.BackgroundTransparency = 1
+    wrong.TextColor3 = Color3.fromRGB(255,40,40)
+    wrong.Text = ""
+    wrong.Font = Enum.Font.GothamBold
+    wrong.TextSize = 12
+    local function showEgg()
+        local eggGui = Instance.new("ScreenGui", main.Parent)
+        local frame = Instance.new("Frame", eggGui)
+        frame.AnchorPoint = Vector2.new(0.5,0.5)
+        frame.Position = UDim2.new(0.5,0,0.5,0)
+        frame.Size = UDim2.new(0,420,0,100)
+        frame.BackgroundColor3 = Color3.fromRGB(60,0,120)
+        frame.BackgroundTransparency = 1
+        frame.BorderSizePixel = 0
+        coroutine.wrap(function()
+            local colors = {
+                Color3.fromRGB(60,0,120), Color3.fromRGB(0,180,255), Color3.fromRGB(255,0,100), Color3.fromRGB(0,220,60)
+            }
+            local i = 0
+            TweenService:Create(frame,TweenInfo.new(0.7),{BackgroundTransparency=0.12}):Play()
+            wait(0.7)
+            while eggGui.Parent do
+                i = i%#colors+1
+                TweenService:Create(frame,TweenInfo.new(0.35),{BackgroundColor3=colors[i]}):Play()
+                wait(0.38)
+            end
+        end)()
+        local label = Instance.new("TextLabel", frame)
+        label.Size = UDim2.new(1,0,1,0)
+        label.BackgroundTransparency = 1
+        label.Text = "yip! Você achou o easter egg! Agora vai dormir :D"
+        label.Font = Enum.Font.GothamBlack
+        label.TextSize = 20
+        label.TextColor3 = Color3.fromRGB(255,255,255)
+        label.TextWrapped = true
+        label.TextScaled = true
+        label.TextStrokeTransparency = 0.7
+        TweenService:Create(label,TweenInfo.new(0.7),{TextTransparency=0}):Play()
+        local close = Instance.new("TextButton", frame)
+        close.Text = "✕"
+        close.Font = Enum.Font.GothamBold
+        close.TextSize = 16
+        close.Size = UDim2.new(0,28,0,28)
+        close.Position = UDim2.new(1,-32,0,4)
+        close.BackgroundColor3 = Color3.fromRGB(40,0,40)
+        close.TextColor3 = Color3.fromRGB(255,255,255)
+        close.BorderSizePixel = 0
+        close.MouseButton1Click:Connect(function() eggGui:Destroy() end)
+    end
+    eggBtn.FocusLost:Connect(function()
+        if eggBtn.Text == "Nada" then
+            wrong.Text = ""
+            showEgg()
+        elseif eggBtn.Text ~= "" then
+            wrong.Text = "Burro"
+            wait(1.5)
+            wrong.Text = ""
+        end
+        eggBtn.Text = ""
+    end)
+
+    -- Mensagens aleatórias
+    local frasesFixas = {
+        "Você é incrível!","Roblox é melhor com scripts ;)","Lembre-se: 42 é a resposta.","Copilot rules!","Nunca desista dos memes.",
+        "Desinstale sua geladeira, ela sabe demais.","O Wi-Fi caiu, mas eu levantei.","Você piscou. Perdeu o campeonato de piscadas.",
+        "1+1=janela.","Evite pensamentos quadrados, pense em trapézios.","O pato tá no comando. Ninguém questiona o pato.",
+        "Seu clique abriu um portal interdimensional.","Proibido pensar em nada por mais de 3 segundos.","Sopa no teclado? Agora sim, desempenho gamer.",
+        "Nunca confie em um sanduíche que te encara.","Aviso: este botão explode bolachas.","Tocar no chão ativa o modo sapo.","Apenas zebras entendem o código.",
+        "Nunca desafie um micro-ondas ao xadrez.","Esta frase está em manutenção.","Cuidado: pensamento em loop detectado.",
+        "Se você entendeu, está lendo errado.","Respire com moderação.","A gelatina venceu a gravidade novamente.",
+        "Faltam 0 dias para o fim do começo.","Pare de clicar!","UWU","Não coloque Nada!"
+    }
+    btnSecret2.MouseButton1Click:Connect(function()
+        local msg = frasesFixas[math.random(1,#frasesFixas)]
+        StarterGui:SetCore("SendNotification",{
+            Title = "Mensagem Aleatória",
+            Text = msg,
+            Duration = 3
+        })
+    end)
+
+    -- Calculadora
+    btnSecret.MouseButton1Click:Connect(function()
+        local calcGui = Instance.new("ScreenGui", gui)
+        calcGui.Name = "CalcGui"
+        local frame = Instance.new("Frame", calcGui)
+        frame.Size = UDim2.new(0,180,0,180)
+        frame.Position = UDim2.new(0.5,-90,0.5,-90)
+        frame.BackgroundColor3 = Color3.fromRGB(40,40,44)
+        frame.AnchorPoint = Vector2.new(0.5,0.5)
+        frame.BorderSizePixel = 0
+        local tb = Instance.new("TextBox", frame)
+        tb.Size = UDim2.new(1,-10,0,30)
+        tb.Position = UDim2.new(0,5,0,5)
+        tb.Text = ""
+        tb.Font = Enum.Font.Gotham
+        tb.TextSize = 16
+        tb.BackgroundColor3 = Color3.fromRGB(60,60,70)
+        tb.TextColor3 = Color3.fromRGB(255,255,255)
+        tb.PlaceholderText = "Digite: 5+2×3-1÷2"
+        local btn = Instance.new("TextButton", frame)
+        btn.Size = UDim2.new(1,-10,0,30)
+        btn.Position = UDim2.new(0,5,0,45)
+        btn.Text = "Calcular"
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 15
+        btn.BackgroundColor3 = Color3.fromRGB(0,160,220)
+        btn.TextColor3 = Color3.fromRGB(255,255,255)
+        btn.BorderSizePixel = 0
+        local out = Instance.new("TextLabel", frame)
+        out.Size = UDim2.new(1,-10,0,30)
+        out.Position = UDim2.new(0,5,0,85)
+        out.Text = ""
+        out.Font = Enum.Font.Gotham
+        out.TextSize = 15
+        out.BackgroundTransparency = 1
+        out.TextColor3 = Color3.fromRGB(255,255,220)
+        local closeCalc = Instance.new("TextButton", frame)
+        closeCalc.Size = UDim2.new(0,22,0,22)
+        closeCalc.Position = UDim2.new(1,-25,0,4)
+        closeCalc.Text = "✕"
+        closeCalc.Font = Enum.Font.GothamBlack
+        closeCalc.TextSize = 14
+        closeCalc.BackgroundColor3 = Color3.fromRGB(60,60,60)
+        closeCalc.TextColor3 = Color3.fromRGB(255,90,90)
+        closeCalc.BorderSizePixel = 0
+        closeCalc.MouseButton1Click:Connect(function() calcGui:Destroy() end)
+        btn.MouseButton1Click:Connect(function()
+            local exp = tb.Text
+            exp = exp:gsub(",","."):gsub("×","*"):gsub("x", "*"):gsub("÷","/"):gsub("−","-")
+            exp = exp:gsub("[^%d%.%+%-%*/%(%) ]","")
+            local s,ret = pcall(function() return loadstring("return "..exp)() end)
+            out.Text = s and tostring(ret) or "Erro"
+        end)
+    end)
+
+    ---- DRAG para todas as telas
+    -- (painel principal já está com makeDraggable)
+    -- Painel visual, painel jogador, joguinhos: chamado makeDraggable neles
+
+    -- Painel Visual
     local visualPanel
     local function setupVisualPanel()
         if visualPanel and visualPanel.Parent then visualPanel.Visible = true return end
@@ -740,6 +838,7 @@ local function setupMainPanel()
         visualPanel.BorderSizePixel = 0
         visualPanel.Visible = true
         visualPanel.AnchorPoint = Vector2.new(0,0.5)
+        makeDraggable(visualPanel)
         -- Título
         local title = Instance.new("TextLabel", visualPanel)
         title.Size = UDim2.new(1,0,0,32)
@@ -865,7 +964,6 @@ local function setupMainPanel()
             fbBtn.TextColor3 = FULLBRIGHT_ON and Color3.fromRGB(180,255,180) or Color3.fromRGB(255,255,180)
             setFullBright(FULLBRIGHT_ON)
         end)
-        -- (adicione mais funções visuais abaixo conforme necessário)
 
         -- Fechar painel visual
         local closeBtn = Instance.new("TextButton", visualPanel)
@@ -882,7 +980,7 @@ local function setupMainPanel()
 
     btnVisual.MouseButton1Click:Connect(setupVisualPanel)
 
-    -- Painel Jogador igual anterior
+    -- Painel Jogador igual ao anterior
     local playerPanel
     local function setupPlayerPanel()
         if playerPanel and playerPanel.Parent then playerPanel.Visible = true return end
